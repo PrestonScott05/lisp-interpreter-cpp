@@ -3,7 +3,17 @@
 Programming Languages (CS-403), The University of Alabama.
 Built by Preston Lumpkins.
 
-this is a read-and-pring loop for S-expressions. this first part (1.1) reads S-expressions and prints them back in token form. There is no evalutation yet. 
+## Project 1.3 — global values & predicates
+
+Adds a global environment `rho` and simple assignment.
+
+- `(set name value)` — evaluates `value`, conses `(name value)` onto `rho`,
+  returns the value. Never mutates existing bindings; newest binding wins on lookup.
+- A symbol now evaluates by looking it up in `rho`; a miss returns the symbol itself.
+- Predicates (false is `()`, truth is `T`): `nil?`, `atom?`, `list?`.
+- Optional: `not?` (alias of `nil?`), `number?` (true for integer symbols).
+
+In the REPL, bindings persist across lines within a session.
 
 ## layout
 src/
@@ -28,9 +38,8 @@ without make:
 Run with no input redirected for an interactive prompt:
 
 ./repl
-=> (a (b c) d)
-(a (b c) d)
-
+=> <expression>
+<evaluated expression>
 ---
 
 End the session with Ctrl-D or pipe / redirect input, which prints each resultl with no prompt:
@@ -44,10 +53,3 @@ Expressions may span multiple lines, and a line may hold several expressions.
 
 Malformed input prints an error and the loop continues. 
 
-## What it does
-
-- reads atoms and builds list from pair cells terminated by `()`.
-
-- prints in list form
-
-- commas treated as whitespace. 
