@@ -16,6 +16,15 @@ enum class ExpressionType {
     Pair
 };
 
+enum class Operator {
+    Quote, 
+    Car, 
+    Cdr, 
+    Cons, 
+    Eval,
+    Unknown
+};
+
 struct SExpression {
     ExpressionType type;
     string atomValue;
@@ -68,6 +77,18 @@ inline bool isPair(shared_ptr<SExpression> node) {
     return node->type == ExpressionType::Pair;
 }
 
+inline shared_ptr<SExpression> car(shared_ptr<SExpression> cell) {
+    return cell->car;
+}
+
+inline shared_ptr<SExpression> cdr(shared_ptr<SExpression> cell) {
+    return cell->cdr;
+}
+
+inline shared_ptr<SExpression> cons(shared_ptr<SExpression> a, shared_ptr<SExpression> b) {
+    return makePair(a, b);
+}
+
 class Reader {
 public: 
     explicit Reader(string str) : sourceString(move(str)), pos(0) {}
@@ -83,6 +104,14 @@ public:
 
         if (curr == ')') {
             throw runtime_error("unexpected ')' with no matching '('");
+        }
+
+        if (curr == '\'') {
+            advance();
+            shared_ptr<SExpression> quoted = read();
+            shared_ptr<SExpression> result = makePair(makeAtom("quote"), makePair(quoted, makeNil()));
+
+            return result;
         }
         
         if (curr == '(') {
@@ -118,7 +147,7 @@ private:
 
         while (!atEnd()) {
             char c = peek();
-            if (c == ' ' || c == '\n' || c == '\t' || c == '\r' || c == '(' || c == ')' || c == ',') {
+            if (c == ' ' || c == '\n' || c == '\t' || c == '\r' || c == '(' || c == ')' || c == ',' || c == '\'') {
                 break;
             }
 
@@ -208,4 +237,53 @@ inline string exprToString(const shared_ptr<SExpression> &expr) {
 
 inline void print(const shared_ptr<SExpression> &expr) {
     cout << exprToString(expr);
+}
+
+inline Operator toOp(const string &s) {
+    if (s == "quote") return Operator::Quote;
+    if (s == "car") return Operator::Car;
+    if (s == "cdr") return Operator::Cdr;
+    if (s == "cons") return Operator::Cons;
+    if (s == "eval") return Operator::Eval;
+    return Operator::Unknown;
+}
+
+inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
+    if (isAtom(expression)) return expression;
+    if (isNil(expression)) return expression;
+
+    shared_ptr<SExpression> operation = car(expression);
+
+    if (!isAtom(operation)) {
+        return expression;
+    }
+
+    switch(toOp(operation->atomValue)) {
+        case Operator::Quote: {
+            shared_ptr<SExpression> arg = car(cdr(expression));
+            return arg;
+        }
+        case Operator::Car: {
+            shared_ptr<SExpression> arg = car(cdr(expression));
+            return car(eval(arg));
+        }
+        case Operator::Cdr: {
+            shared_ptr<SExpression> arg = car(cdr(expression));
+            return cdr(eval(arg));
+        }
+        case Operator::Cons: {
+            shared_ptr<SExpression> a = car(cdr(expression));
+            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+            return cons(eval(a), eval(b));  
+        }
+        case Operator::Eval: {
+            shared_ptr<SExpression> arg = car(cdr(expression));
+            return eval(eval(arg));
+        }
+
+        case Operator::Unknown: {
+            return expression;
+        }
+    }
+    throw runtime_error("eval unreachable");
 }

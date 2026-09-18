@@ -6,7 +6,7 @@ static void processChunk(const string &src) {
 
     try {
         while (reader.hasMoreStuff()) {
-            print(reader.read());
+            print(eval(reader.read()));
             cout << "\n";
         }
     } catch (const exception &ex) {
