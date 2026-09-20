@@ -46,8 +46,4 @@ Malformed input prints an error and the loop continues.
 
 ## What it does
 
-- reads atoms and builds list from pair cells terminated by `()`.
-
-- prints in list form
-
-- commas treated as whitespace. 
+all requirements up to project 1.3 - Global Variables
