@@ -10,7 +10,7 @@ static void processChunk(const string &src) {
             cout << "\n";
         }
     } catch (const exception &ex) {
-        cerr << "there was an error: " << ex.what() << endl;
+        cerr << "there was an error -> " << ex.what() << endl;
     }
 }
 
