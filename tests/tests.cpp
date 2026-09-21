@@ -8,6 +8,23 @@ static shared_ptr<SExpression> parse(const string &str) {
     return reader.read();
 }
 
+
+static string run(const string &str) {
+    rho = makeNil(); 
+    Reader reader(str);
+    return exprToString(eval(reader.read()));
+}
+
+static string testSession(const vector<string> &expressions) {
+    rho = makeNil();
+    string last;
+    for (const auto &e : expressions) {
+        Reader r(e);
+        last = exprToString(eval(r.read()));
+    }
+    return last;
+}
+
 TEST_SUITE("project 1.1") {
     TEST_CASE("1.1.1 data") {
         SUBCASE("1.1.1.1 makeAtom makes an atom") {
@@ -105,10 +122,6 @@ TEST_SUITE("project 1.1") {
     }
 }
 
-static string run(const string &str) {
-    Reader reader(str);
-    return exprToString(eval(reader.read()));
-}
 
 
 
@@ -207,6 +220,61 @@ TEST_SUITE("project 1.2") {
 
         SUBCASE("1.2.4.4 shorthand == long form") {
             CHECK(run("(car '(a b c))") == run("(car (quote (a b c)))"));
+        }
+    }
+}
+
+
+TEST_SUITE("Project 1.3") {
+    TEST_CASE("1.3.1 set and lookup funs") {
+        SUBCASE("1.3.1.1 set returns the bound val") {
+            CHECK(run("(set a 2)") == "2");
+        }
+
+        SUBCASE("1.3.1.2 set then lookup") {
+            CHECK(testSession({"(set a 2)", "a"}) == "2");
+        }
+
+        SUBCASE("1.3.1.3 lookup misses returns the symbol") {
+            CHECK(run("x") == "x");
+        }
+
+        SUBCASE("1.3.1.4 newest set overrides") {
+            CHECK(testSession({"(set a 2)", "(set a 9)", "a"}) == "9");
+        }
+    }
+
+    TEST_CASE("1.3.2 predicates") {
+        SUBCASE("1.3.2.1 nil?") {
+            CHECK(run("(nil? ())") == "T");
+            CHECK(run("(nil? 'T)") == "()");
+        }
+
+        SUBCASE("1.3.2.2 atom?") {
+            CHECK(run("(atom? x)") == "T");
+            CHECK(run("(atom? (a))") == "()");
+            CHECK(run("(atom? ())") == "()");
+            CHECK(run("(atom? 123)") == "T");
+        }
+
+        SUBCASE("1.3.2.3 list?") {
+            CHECK(run("(list? 'T)") == "()");
+            CHECK(run("(list? (x))") == "T");
+            CHECK(run("(list? a)") == "()");
+        }
+
+        SUBCASE("1.3.2.4 number?") {
+            CHECK(run("(number? 42)") == "T");
+            CHECK(run("(number? -42)") == "T");
+
+            CHECK(run("(number? 42.31)") == "()");
+            CHECK(run("(number? -42.31)") == "()");
+
+            CHECK(run("(number? x)") == "()");
+            CHECK(run("(number? (a b))") == "()");
+
+            CHECK(run("(number? -)") == "()");
+            CHECK(run("(number? ())") == "()");
         }
     }
 }
