@@ -77,6 +77,18 @@ TEST_SUITE("project 1.1") {
         }
     }
 
+    TEST_CASE("1.1.added_later error paths") {
+        SUBCASE(" car of non-pair throws") {
+            CHECK_THROWS_AS(run("(car 'a)"), runtime_error);
+        }
+        SUBCASE("cdr of non-pair throws") {
+            CHECK_THROWS_AS(run("(cdr 'a)"), runtime_error);
+        }
+        SUBCASE("car of nil throws") {
+            CHECK_THROWS_AS(run("(car ())"), runtime_error);
+        }
+    }
+
     TEST_CASE("1.1.3 printef") {
         SUBCASE("1.1.3.1 atom") { 
             CHECK(exprToString(makeAtom("hi")) == "hi"); 
@@ -275,6 +287,120 @@ TEST_SUITE("Project 1.3") {
 
             CHECK(run("(number? -)") == "()");
             CHECK(run("(number? ())") == "()");
+        }
+    }
+}
+
+TEST_SUITE("Project 1.4") {
+    TEST_CASE("1.4.1 and? tests") {
+        SUBCASE("1.4.1.1 both non nil returns true") {
+            CHECK(run("(and? 'a 'b)") == "T");
+        }
+        SUBCASE("1.4.1.2 first nil produces ()") {    
+            CHECK(run("(and? () 'b)") == "()");
+        }
+        SUBCASE("1.4.1.3 second nil produces ()") {
+            CHECK(run("(and? 'a ())") == "()");
+        }
+
+        SUBCASE("1.4.1.4 both nil yields ()") {
+            CHECK(run("(and? () ())") == "()");
+        }
+
+        SUBCASE("1.4.1.5 short-circuits: b not evaluated when a is nil") {
+            CHECK(run("(and? () (car ()))") == "()");
+        }
+    }
+
+    TEST_CASE("1.4.2 or?") {
+        SUBCASE("1.4.2.1 both nil yeilds ()") {
+            CHECK(run("(or? () ())") == "()");
+        }
+        SUBCASE("1.4.2.2 first non-nil gives T") {
+            CHECK(run("(or? 'a ())") == "T");
+        }
+        SUBCASE("1.4.2.3 second non-nil gives T") {
+            CHECK(run("(or? () 'b)") == "T");
+        }
+        SUBCASE("1.4.2.4 both non-nil gives  T") {
+            CHECK(run("(or? 'a 'b)") == "T");
+        }
+        SUBCASE("1.4.2.5 short-circuits: b not evaluated when a is non-nil") {
+            // we use an invalid operation to confirm the short circuit because this would throw an error. 
+            CHECK(run("(or? 'a (car ()))") == "T");
+        }
+    }
+
+    TEST_CASE("1.4.3 eq?") {
+        SUBCASE("1.4.3.1 same symbol makes T") {
+            CHECK(run("(eq? 'a 'a)") == "T");
+        }
+        SUBCASE("1.4.3.2 different symbols makes ()") {
+            CHECK(run("(eq? 'a 'b)") == "()");
+        }
+        SUBCASE("1.4.3.3 args are evaluated") {
+            CHECK(testSession({"(set a 2)", "(set b 2)", "(eq? a b)"}) == "T");
+        }
+        SUBCASE("1.4.3.4 evaluated to different makes ()") {
+            CHECK(testSession({"(set a 2)", "(set b 4)", "(eq? a b)"}) == "()");
+        }
+        SUBCASE("1.4.3.5 nil is not an atom makes ()") {
+            CHECK(run("(eq? () ())") == "()");
+        }
+        SUBCASE("1.4.3.6 lists are not compared -> ()") {
+            CHECK(run("(eq? '(a) '(a))") == "()");
+        }
+        SUBCASE("1.4.3.7 atom vs list -> ()") {
+            CHECK(run("(eq? 'a '(a))") == "()");
+        }
+        SUBCASE("1.4.3.8 numbers compare by symbol and not as an atom") {
+            CHECK(run("(eq? 42 42)") == "T");
+            CHECK(run("(eq? 42 43)") == "()");
+        }
+    }
+
+    TEST_CASE("1.4.4 if") {
+        SUBCASE("1.4.4.1 true branch") {
+            CHECK(run("(if 'T ''T ())") == "(quote T)");
+        }
+        SUBCASE("1.4.4.2 false branch") {
+            CHECK(run("(if () ''T ())") == "()");
+        }
+        SUBCASE("1.4.4.3 untaken branch not evaluated (true)") {
+            //else condition would throw
+            CHECK(run("(if 'T 'ok (car ()))") == "ok");
+        }
+        SUBCASE("1.4.4.4 untaken branch not evaluated (false)") {
+            //first condition would throw
+            CHECK(run("(if () (car ()) 'ok)") == "ok");
+        }
+        SUBCASE("1.4.4.5 missing else, false cond -> ()") {
+            CHECK(run("(if () 'then)") == "()");
+        }
+        SUBCASE("1.4.4.6 condition is evaluated") {
+            CHECK(testSession({"(set c ())", "(if c 'yes 'no)"}) == "no");
+        }
+    }
+
+    TEST_CASE("1.4.5 cond") {
+        SUBCASE("1.4.5.1 first match wins") {
+            CHECK(run("(cond ('T 'first 'T 'second))") == "first");
+        }
+        SUBCASE("1.4.5.2 skips nil clauses") {
+            CHECK(run("(cond (() 'skip 'T 'taken))") == "taken");
+        }
+        SUBCASE("1.4.5.3 T default fires when all else nil (just a good practice)") {
+            CHECK(run("(cond (() 'a () 'b 'T 'default))") == "default");
+        }
+        SUBCASE("1.4.5.4 only matched b is evaluated") {
+            //again would throw, so we make sure this isn't evaled
+            CHECK(run("(cond (() (car ()) 'T 'safe))") == "safe");
+        }
+        SUBCASE("1.4.5.5 no clause matches -> throws") {
+            CHECK_THROWS_AS(run("(cond (() 'a () 'b))"), runtime_error);
+        }
+        SUBCASE("1.4.5.6 condition exprs are evaluated") {
+            CHECK(testSession({"(set flag 'T)", "(cond (flag 'on 'T 'off))"}) == "on");
         }
     }
 }

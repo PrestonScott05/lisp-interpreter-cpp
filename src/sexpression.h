@@ -24,10 +24,17 @@ enum class Operator {
     Cdr, 
     Cons, 
     Eval,
-    Set,
+    Set, // currently only global
 
     //predicates (?suffixed)
     Nil_q, Atom_q, List_q, Number_q,
+
+    //logic operators
+    And_q, Or_q, Eq_q,
+
+    //branches
+    If, Cond,
+
     Unknown
 };
 
@@ -297,6 +304,12 @@ inline Operator toOp(const string &s) {
     if (s == "list?") return Operator::List_q;
     if (s == "not?") return Operator::Nil_q;
     if (s == "number?") return Operator::Number_q;
+    if (s == "and?") return Operator::And_q;
+    if (s == "or?") return Operator::Or_q;
+    if (s == "eq?") return Operator::Eq_q;
+    if (s == "if") return Operator::If;
+    if (s == "cond") return Operator::Cond;
+
     return Operator::Unknown;
 }
 
@@ -316,12 +329,14 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
             return arg;
         }
         case Operator::Car: {
-            shared_ptr<SExpression> arg = car(cdr(expression));
-            return car(eval(arg));
+            shared_ptr<SExpression> arg = eval(car(cdr(expression)));
+            if (!isPair(arg)) throw runtime_error("car not a pair: " + exprToString(arg));
+            return car(arg);
         }
         case Operator::Cdr: {
-            shared_ptr<SExpression> arg = car(cdr(expression));
-            return cdr(eval(arg));
+            shared_ptr<SExpression> arg = eval(car(cdr(expression)));
+            if (!isPair(arg)) throw runtime_error("cdr not a pair: " + exprToString(arg));
+            return cdr(arg);
         }
         case Operator::Cons: {
             shared_ptr<SExpression> a = car(cdr(expression));
@@ -384,6 +399,87 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
             } else {
                 return FALSE_;
             }
+        }
+
+        case Operator::And_q: {
+            shared_ptr<SExpression> a = car(cdr(expression));
+            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+
+            shared_ptr<SExpression> aRes = eval(a);
+
+            if (isNil(aRes)) {
+                return FALSE_;
+            } else {
+                shared_ptr<SExpression> bRes = eval(b);
+                if (isNil(bRes)) {
+                    return FALSE_;
+                } else {
+                    return TRUE_;
+                }
+
+            }
+        }
+
+        case Operator::Or_q: {
+            shared_ptr<SExpression> a = car(cdr(expression));
+            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+
+            shared_ptr<SExpression> aRes = eval(a);
+            
+            if (!isNil(aRes)) {
+                return TRUE_;
+            } else {
+                shared_ptr<SExpression> bRes = eval(b);
+                if (!isNil(bRes)) {
+                    return TRUE_;
+                } else {
+                    return FALSE_;
+                }
+            }
+        }
+
+        case Operator::Eq_q: {
+            shared_ptr<SExpression> a = car(cdr(expression));
+            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+            shared_ptr<SExpression> aRes = eval(a);
+            shared_ptr<SExpression> bRes = eval(b);
+
+            if (!isAtom(aRes) || !isAtom(bRes)) {
+                return FALSE_;
+            } else {
+                return aRes->atomValue == bRes->atomValue ? TRUE_ : FALSE_;
+            }
+        }
+
+        case Operator::If: {
+            shared_ptr<SExpression> condition = car(cdr(expression));
+            shared_ptr<SExpression> evalIfTrue = car(cdr(cdr(expression)));
+            shared_ptr<SExpression> elsePart = cdr(cdr(cdr(expression)));
+
+            if (!isNil(eval(condition))) {
+                return eval(evalIfTrue);
+            }
+            
+            if (isNil(elsePart)) {
+                return FALSE_;              
+            }
+            return eval(car(elsePart));
+        }
+
+        case Operator::Cond: {
+            shared_ptr<SExpression> clauses = car(cdr(expression));
+            while (isPair(clauses)) {
+                shared_ptr<SExpression> a = car(clauses);
+                shared_ptr<SExpression> b = car(cdr(clauses));
+
+                if (!isNil(eval(a))) {
+                    return eval(b);
+                }
+
+                clauses = cdr(cdr(clauses));
+            }
+
+            throw runtime_error("no clauses were not nil and thus cannot be evaluated");
         }
         case Operator::Unknown: {
             return expression;
