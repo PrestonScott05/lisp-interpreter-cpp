@@ -1,19 +1,13 @@
-# S-Expression reader
+# lisp interpreter
 
 Programming Languages (CS-403), The University of Alabama.
 Built by Preston Lumpkins.
 
-## Project 1.3 — global values & predicates
+## Project 1.4 — conditionals & logic
 
-Adds a global environment `rho` and simple assignment.
+- Adds short-circuiting boolean operators, atom equality, and branching.
 
-- `(set name value)` — evaluates `value`, conses `(name value)` onto `rho`,
-  returns the value. Never mutates existing bindings; newest binding wins on lookup.
-- A symbol now evaluates by looking it up in `rho`; a miss returns the symbol itself.
-- Predicates (false is `()`, truth is `T`): `nil?`, `atom?`, `list?`.
-- Optional: `not?` (alias of `nil?`), `number?` (true for integer symbols).
-
-In the REPL, bindings persist across lines within a session.
+- Added handling for car/cdr of nil
 
 ## layout
 src/
@@ -42,7 +36,7 @@ Run with no input redirected for an interactive prompt:
 <evaluated expression>
 ---
 
-End the session with Ctrl-D or pipe / redirect input, which prints each resultl with no prompt:
+End the session with Ctrl-C or pipe / redirect input, which prints each result with no prompt:
 
     echo '(1 2 3)' | ./repl
     ./repl < input.txt
@@ -53,6 +47,10 @@ Expressions may span multiple lines, and a line may hold several expressions.
 
 Malformed input prints an error and the loop continues. 
 
-## What it does
+## Progress
 
-all requirements up to project 1.3 - Global Variables
+- 1.1 data, reader, printer — completed
+- 1.2 quote, eval, accessors — completed
+- 1.3 global values & predicates — completed
+- 1.4 conditionals & logic — completed
+- next: 1.5
