@@ -404,3 +404,116 @@ TEST_SUITE("Project 1.4") {
         }
     }
 }
+
+TEST_SUITE("Project 1.5") {
+    TEST_CASE("1.5.1 add tests") {
+        SUBCASE("1.5.1.1 basic") {
+            CHECK(run("(add 2 3)") == "5");
+        }
+        SUBCASE("1.5.1.2 negatives") {
+            CHECK(run("(add -2 3)") == "1");
+            CHECK(run("(add -5 -4)") == "-9");
+        }
+
+        SUBCASE("1.5.1.3 args get evaled") {
+            CHECK(testSession({"(set a 10)", "(add a 5)"}) == "15");
+        }
+
+        SUBCASE("1.5.1.4 nests") {
+            CHECK(run("(add (add 1 2) 3)") == "6");
+        }
+    }
+
+    TEST_CASE("1.5.2 sub") {
+
+        SUBCASE("1.5.2.1 basic") {
+            CHECK(run("(sub 7 3)") == "4");
+        }
+
+        SUBCASE("1.5.2.2 can get negative results") {
+            CHECK(run("(sub 3 7)") == "-4");
+        }
+        SUBCASE("1.5.2.3 args get evaled") {
+            CHECK(testSession({"(set a 5)", "(sub a 5)"}) == "0");
+        }
+
+    }
+
+    TEST_CASE("1.5.3 mul") {
+        SUBCASE("1.5.3.1 basic") {
+            CHECK(run("(mul 4 5)") == "20");
+        }
+        SUBCASE("1.5.3.2 by zero") {
+            CHECK(run("(mul 4 0)") == "0");
+        }
+        SUBCASE("1.5.3.3 sign rules apply") {
+            CHECK(run("(mul -3 4)") == "-12");
+        }
+
+        SUBCASE("1.5.3.4 args get evaled") {
+            CHECK(testSession({"(set a 10)", "(set b 5)", "(mul a b)"}) == "50");
+        }
+    }
+
+    TEST_CASE("1.5.4 div") {
+        SUBCASE("1.5.4.1 exact") {
+            CHECK(run("(div 12 4)") == "3");
+        }
+        SUBCASE("1.5.4.2 integer division truncates toward zero") {
+            CHECK(run("(div 7 2)") == "3");
+        }
+        SUBCASE("1.5.4.3 divide by zero throws") {
+            CHECK_THROWS_AS(run("(div 5 0)"), runtime_error);
+        }
+
+        SUBCASE("1.5.4.4 arges get evaluated") {
+            CHECK(testSession({"(set a 9)", "(set b 3)", "(div a b)"}) == "3");
+        }
+    }
+
+    TEST_CASE("1.5.5 rem") {
+        SUBCASE("1.5.5.1 basic") {
+            CHECK(run("(rem 7 3)") == "1");
+        }
+        SUBCASE("1.5.5.2 exact -> 0") {
+            CHECK(run("(rem 8 4)") == "0");
+        }
+        SUBCASE("1.5.5.3 rem by zero throws") {
+            CHECK_THROWS_AS(run("(rem 5 0)"), runtime_error);
+        }
+
+        SUBCASE("1.5.5.4 arguments evaled") {
+            CHECK(testSession({"(set a 12)", "(set b 5)", "(rem a b)"}) == "2");
+        }
+    }
+
+    TEST_CASE("1.5.6 lt") {
+        SUBCASE("1.5.6.1 less -> T") {
+            CHECK(run("(lt 2 5)") == "T");
+        }
+        SUBCASE("1.5.6.2 greater -> ()") {
+            CHECK(run("(lt 5 2)") == "()");
+        }
+        SUBCASE("1.5.6.3 equal -> ()") {
+            CHECK(run("(lt 4 4)") == "()");
+        }
+        SUBCASE("1.5.6.4 negatives") {
+            CHECK(run("(lt -3 0)") == "T");
+        }
+        SUBCASE("1.5.6.5 args are evaluated") {
+            CHECK(testSession({"(set a 1)", "(set b 2)", "(lt a b)"}) == "T");
+        }
+    }
+
+    TEST_CASE("1.5.7 type errors") {
+        SUBCASE("1.5.7.1 non-number atom throws") {
+            CHECK_THROWS_AS(run("(add 'x 5)"), runtime_error);
+        }
+        SUBCASE("1.5.7.2 nil is not a number") {
+            CHECK_THROWS_AS(run("(add () 5)"), runtime_error);
+        }
+        SUBCASE("1.5.7.3 list is not a number") {
+            CHECK_THROWS_AS(run("(lt '(a) 5)"), runtime_error);
+        }
+    }
+}

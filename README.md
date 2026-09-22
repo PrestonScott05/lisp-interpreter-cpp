@@ -3,11 +3,9 @@
 Programming Languages (CS-403), The University of Alabama.
 Built by Preston Lumpkins.
 
-## Project 1.4 — conditionals & logic
+## Project 1.5 — conditionals & logic
 
-- Adds short-circuiting boolean operators, atom equality, and branching.
-
-- Added handling for car/cdr of nil
+- adds basic math functions
 
 ## layout
 src/
@@ -53,4 +51,5 @@ Malformed input prints an error and the loop continues.
 - 1.2 quote, eval, accessors — completed
 - 1.3 global values & predicates — completed
 - 1.4 conditionals & logic — completed
-- next: 1.5
+- 1.5 basic math
+- next: 1.6
