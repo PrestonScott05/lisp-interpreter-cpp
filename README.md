@@ -3,9 +3,9 @@
 Programming Languages (CS-403), The University of Alabama.
 Built by Preston Lumpkins.
 
-## Project 1.5 — conditionals & logic
+## Project 1.6 — local environents
 
-- adds basic math functions
+- adds a local environment and its tests
 
 ## layout
 src/
@@ -41,7 +41,7 @@ End the session with Ctrl-C or pipe / redirect input, which prints each result w
 
 ---
 
-Expressions may span multiple lines, and a line may hold several expressions. 
+per the requirements, expressions may span multiple lines, and a line may hold several expressions. 
 
 Malformed input prints an error and the loop continues. 
 
@@ -51,5 +51,6 @@ Malformed input prints an error and the loop continues.
 - 1.2 quote, eval, accessors — completed
 - 1.3 global values & predicates — completed
 - 1.4 conditionals & logic — completed
-- 1.5 basic math
-- next: 1.6
+- 1.5 basic math - completed
+- 1.6 local env - completed
+- next: 1.7 
