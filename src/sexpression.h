@@ -41,6 +41,9 @@ enum class Operator {
     //Relations
     LessThan,
 
+    //functions!! (finally)
+    Function, 
+
     Unknown
 };
 
@@ -85,6 +88,7 @@ inline shared_ptr<SExpression> makePair(shared_ptr<SExpression> myCar, shared_pt
 }
 
 inline shared_ptr<SExpression> rho = makeNil();
+inline shared_ptr<SExpression> localEnv = makeNil();
 const inline shared_ptr<SExpression> TRUE_ = makeAtom("T");
 const inline shared_ptr<SExpression> FALSE_ = makeNil();
 
@@ -295,13 +299,35 @@ inline shared_ptr<SExpression> list(shared_ptr<SExpression> a, shared_ptr<SExpre
     return cons(a, cons(b, makeNil()));
 }
 
-inline shared_ptr<SExpression> lookup(shared_ptr<SExpression> symbol, shared_ptr<SExpression> environment) {
-    while (isPair(environment)) {
-        shared_ptr<SExpression> entry = car(environment);
-        shared_ptr<SExpression> name = car(entry);
+inline shared_ptr<SExpression> lookupFrame(const shared_ptr<SExpression> &symbol, shared_ptr<SExpression> frame, bool &found) {
+    shared_ptr<SExpression> names = car(frame);
+    shared_ptr<SExpression> values = car(cdr(frame));
 
-        if (name->atomValue == symbol->atomValue) return car(cdr(entry));
-        environment = cdr(environment);
+    while (isPair(names) && isPair(values)) {
+        if (car(names)->atomValue == symbol->atomValue) {
+            found = true;
+            return car(values);
+        }
+        names = cdr(names);
+        values = cdr(values);
+    }
+
+    found = false;
+    return nullptr;
+}
+
+inline shared_ptr<SExpression> lookup(shared_ptr<SExpression> symbol) {
+    if (isPair(localEnv)) {
+        bool found;
+        auto val = lookupFrame(symbol, car(localEnv), found);
+        if (found) return val;
+    }
+
+    shared_ptr<SExpression> env = rho;
+    while(isPair(env)) {
+        shared_ptr<SExpression> entry = car(env);
+        if (car(entry) -> atomValue == symbol->atomValue) return car(cdr(entry));
+        env = cdr(env);
     }
 
     return symbol;
@@ -335,11 +361,13 @@ inline Operator toOp(const string &s) {
     
     if (s == "lt") return Operator::LessThan;
 
+    if (s == "function") return Operator::Function;
+
     return Operator::Unknown;
 }
 
 inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
-    if (isAtom(expression)) return lookup(expression, rho);
+    if (isAtom(expression)) return lookup(expression);
     if (isNil(expression)) return expression;
 
     shared_ptr<SExpression> operation = car(expression);
@@ -567,6 +595,10 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
         }
 
         //---
+
+        case Operator::Function: {
+            return expression;
+        }
         case Operator::Unknown: {
             return expression;
         }

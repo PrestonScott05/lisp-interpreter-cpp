@@ -517,3 +517,105 @@ TEST_SUITE("Project 1.5") {
         }
     }
 }
+
+//1.6 helpers
+//build a fram((names) (values)) from two src strings
+static shared_ptr<SExpression> frame(const string &names, const string &values) {
+    return list(parse(names), parse(values));
+}
+
+static string localSession(shared_ptr<SExpression> env, const vector<string> &exprs) {
+    struct Reset { 
+            ~Reset() {
+                localEnv = makeNil(); 
+        } 
+    } reset;
+    rho = makeNil();
+    localEnv = env;
+    string last;
+    for (const auto &e : exprs) {
+        Reader r(e);
+        last = exprToString(eval(r.read()));
+    }
+    return last;
+}
+
+//for 1.6's spec
+static shared_ptr<SExpression> requirementEnv() {
+    return cons(frame("(a b c)", "(2 3 x)"), makeNil());
+}
+
+TEST_SUITE("Project 1.6") {
+    TEST_CASE("1.6.1 local lookup") {
+        SUBCASE("1.6.1.1 requirement example") {
+            CHECK(localSession(requirementEnv(), {"a"}) == "2");
+            CHECK(localSession(requirementEnv(), {"b"}) == "3");
+            CHECK(localSession(requirementEnv(), {"c"}) == "x");
+        }
+        SUBCASE("1.6.1.2 locals work inside expressions") {
+            CHECK(localSession(requirementEnv(), {"(add a b)"}) == "5");
+            CHECK(localSession(requirementEnv(), {"(lt a b)"}) == "T");
+        }
+        SUBCASE("1.6.1.3 quoted symbols are not looked up") {
+            CHECK(localSession(requirementEnv(), {"'b"}) == "b");
+        }
+        SUBCASE("1.6.1.4 unbound symbol returns itself") {
+            CHECK(localSession(requirementEnv(), {"q"}) == "q");
+        }
+    }
+
+    TEST_CASE("1.6.2 local vs global") {
+        SUBCASE("1.6.2.1 local shadows global") {
+            CHECK(localSession(requirementEnv(), {"(set a 99)", "a"}) == "2");
+        }
+        SUBCASE("1.6.2.2 falls through to global") {
+            CHECK(localSession(requirementEnv(), {"(set z 5)", "z"}) == "5");
+            CHECK(localSession(requirementEnv(), {"(set z 5)", "(add z b)"}) == "8");
+        }
+        SUBCASE("1.6.2.3 empty local stack behaves like before") {
+            CHECK(localSession(makeNil(), {"b"}) == "b");
+            CHECK(localSession(makeNil(), {"(set b 7)", "b"}) == "7");
+        }
+    }
+
+    TEST_CASE("1.6.3 stack behavior") {
+        SUBCASE("1.6.3.2 top frame always firt") {
+            auto env = cons(frame("(a)", "(top)"), cons(frame("(a)", "(old)"), makeNil()));
+            CHECK(localSession(env, {"a"}) == "top");
+        }
+        SUBCASE("1.6.3.2 only top frame is searched") {
+            auto env = cons(frame("(b)", "(1)"), cons(frame("(a)", "(2)"), makeNil()));
+            CHECK(localSession(env, {"a"}) == "a");
+        }
+        SUBCASE("1.6.3.3 popping via cdr restores outer scope") {
+            auto env = cons(frame("(a)", "(inner)"), cons(frame("(a)", "(outer)"), makeNil()));
+            CHECK(localSession(cdr(env), {"a"}) == "outer");
+        }
+        SUBCASE("1.6.3.4 empty frame falls through") {
+            auto env = cons(frame("()", "()"), makeNil());
+            CHECK(localSession(env, {"(set a 4)", "a"}) == "4");
+        }
+        SUBCASE("1.6.3.5 mismatched lengths don't crash") {
+            auto env = cons(frame("(a b)", "(1)"), makeNil());
+            CHECK(localSession(env, {"a"}) == "1");
+            CHECK(localSession(env, {"b"}) == "b");
+        }
+    }
+
+    TEST_CASE("1.6.4 function expressions") {
+        SUBCASE("1.6.4.1 function evaluates to itself") {
+            CHECK(run("(function (n) (add n 1))") == "(function (n) (add n 1))");
+        }
+        SUBCASE("1.6.4.2 empty arglist") {
+            CHECK(run("(function () 5)") == "(function () 5)");
+        }
+        SUBCASE("1.6.4.3 set bins funtion") {
+            CHECK(testSession({"(set foo (function (n) (add n 1)))", "foo"})
+                  == "(function (n) (add n 1))");
+        }
+        SUBCASE("1.6.4.4 body not evaled at definition") {
+            CHECK(localSession(requirementEnv(), {"(set bar (function () b))", "bar"})
+                  == "(function () b)");
+        }
+    }
+}
