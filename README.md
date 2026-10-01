@@ -45,7 +45,7 @@ per the requirements, expressions may span multiple lines, and a line may hold s
 
 Malformed input prints an error and the loop continues. 
 
-## Progress
+## Progress and Summary
 
 - 1.1 data, reader, printer — completed
 - 1.2 quote, eval, accessors — completed
