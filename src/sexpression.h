@@ -366,6 +366,21 @@ inline Operator toOp(const string &s) {
     return Operator::Unknown;
 }
 
+struct LocalEnvGuard {
+    shared_ptr<SExpression> saved = localEnv;
+    ~LocalEnvGuard() { localEnv = saved; }
+};
+
+inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression);
+
+inline shared_ptr<SExpression> evalList(shared_ptr<SExpression> args) {
+    if (isNil(args)) {
+        return makeNil(); 
+    }
+
+    return cons(eval(car(args)), evalList(cdr(args)));
+} 
+
 inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
     if (isAtom(expression)) return lookup(expression);
     if (isNil(expression)) return expression;
@@ -595,12 +610,23 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
         }
 
         //---
-
         case Operator::Function: {
             return expression;
         }
         case Operator::Unknown: {
-            return expression;
+            shared_ptr<SExpression> fn = lookup(operation);
+
+            if (!isPair(fn) || car(fn)->atomValue != "function") return expression;
+
+            shared_ptr<SExpression> params = car(cdr(fn));
+            shared_ptr<SExpression> body = car(cdr(cdr(fn)));
+
+            shared_ptr<SExpression> actuals = evalList(cdr(expression));
+
+            LocalEnvGuard guard;
+            localEnv = cons(list(params, actuals), localEnv);
+
+            return eval(body);
         }
 
     }

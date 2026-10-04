@@ -619,3 +619,89 @@ TEST_SUITE("Project 1.6") {
         }
     }
 }
+
+static string callSession(const vector<string> &exprs) {
+    localEnv = makeNil();
+    return testSession(exprs);
+}
+
+TEST_SUITE("Project 1.7") {
+    TEST_CASE("1.7.1 basic  func calls") {
+        SUBCASE("1.7.1.1 identity") {
+            CHECK(callSession({"(set f (function (x) x))", "(f 5)"}) == "5");
+        }
+        SUBCASE("1.7.1.2 two params") {
+            CHECK(callSession({"(set g (function (a b) (add a b)))", "(g 1 2)"}) == "3");
+        }
+        SUBCASE("1.7.1.3 zero params") {
+            CHECK(callSession({"(set five (function () 5))", "(five)"}) == "5");
+        }
+        SUBCASE("1.7.1.4 actuals are evaluated") {
+            CHECK(callSession({"(set g (function (a b) (add a b)))", "(g (add 1 2) 4)"}) == "7");
+        }
+        SUBCASE("1.7.1.5 quoted actual stays data") {
+            CHECK( callSession({"(set f (function (x) (car x)))", "(f '(a b))"}) == "a");
+        }
+    }
+
+    TEST_CASE("1.7.2 local/global scoping") {
+        SUBCASE("1.7.2.1 param shadows global") {
+            CHECK(callSession({"(set x 100)", "(set f (function (x) x))", "(f 1)"}) == "1");
+        }
+        SUBCASE("1.7.2.2 check if frame popped") {
+            CHECK(callSession({"(set x 100)", "(set f (function (x) x))", "(f 1)", "x"}) == "100");
+        }
+        SUBCASE("1.7.2.3 body doesnt ignore globals") {
+            CHECK(callSession({"(set k 10)", "(set f (function (n) (add n k)))", "(f 1)"}) == "11");
+        }
+        SUBCASE("1.7.2.4 actuals evaluated in CALLER frames") {
+            CHECK(callSession({"(set f (function (x) x))",
+                               "(set g (function (x y) (f y)))",
+                               "(g 1 2)"}) == "2");
+        }
+        SUBCASE("1.7.2.5 callee  func can't see callers locals (no dynamic scope)") {
+            CHECK(callSession({"(set h (function () y))",
+                               "(set k (function (y) (h)))",
+                               "(k 5)"}) == "y");
+        }
+    }
+
+    TEST_CASE("1.7.3 recursion") {
+        SUBCASE("1.7.3.1 factorial") {
+            CHECK(callSession({"(set fact (function (n) (if (lt n 1) 1 (mul n (fact (sub n 1))))))",
+                               "(fact 5)"}) == "120");
+        }
+        SUBCASE("1.7.3.2 list length") {
+            CHECK(callSession({"(set len (function (l) (if (nil? l) 0 (add 1 (len (cdr l))))))",
+                               "(len '(a b c))"}) == "3");
+        }
+        SUBCASE("1.7.3.3 mutual recursion") {
+            CHECK(callSession({"(set ev (function (n) (if (eq? n 0) 'T (od (sub n 1)))))",
+                               "(set od (function (n) (if (eq? n 0) () (ev (sub n 1)))))",
+                               "(ev 4)"}) == "T");
+        }
+    }
+
+    TEST_CASE("1.7.4 stack cleanlinesss") {
+        SUBCASE("1.7.4.1 localEnv empty after a deep recursion func") {
+            callSession({"(set fact (function (n) (if (lt n 1) 1 (mul n (fact (sub n 1))))))",
+                         "(fact 5)"});
+            CHECK(isNil(localEnv));
+        }
+        SUBCASE("1.7.4.2 localEnv restored when the body throws") {
+            CHECK_THROWS_AS(callSession({"(set bad (function (n) (div n 0)))", "(bad 5)"}),
+                            runtime_error);
+            CHECK(isNil(localEnv));
+            localEnv = makeNil();
+        }
+    }
+
+    TEST_CASE("1.7.5 design decisions (documenting current behavior)") {
+        SUBCASE("1.7.5.1 built-ins can't be shadowed") {
+            CHECK(callSession({"(set add (function (a b) 0))", "(add 1 2)"}) == "3");
+        }
+        SUBCASE("1.7.5.2 unknown non-function head still returns data") {
+            CHECK(callSession({"(bogus 1)"}) == "(bogus 1)");
+        }
+    }
+}
