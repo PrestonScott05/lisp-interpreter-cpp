@@ -43,8 +43,9 @@ enum class Operator {
 
     //functions!! (finally)
     Function, 
+    Def,
 
-    Unknown
+    Unknown,
 };
 
 struct SExpression {
@@ -362,6 +363,7 @@ inline Operator toOp(const string &s) {
     if (s == "lt") return Operator::LessThan;
 
     if (s == "function") return Operator::Function;
+    if (s == "def") return Operator::Def;
 
     return Operator::Unknown;
 }
@@ -613,6 +615,18 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
         case Operator::Function: {
             return expression;
         }
+        case Operator::Def: {
+            shared_ptr<SExpression> name = car(cdr(expression));
+            shared_ptr<SExpression> parameters = car(cdr(cdr(expression)));
+            shared_ptr<SExpression> body = car(cdr(cdr(cdr(expression))));
+            
+
+            shared_ptr<SExpression> functionExpr = cons(makeAtom("function"), cons(parameters, cons(body, makeNil())));
+
+            shared_ptr<SExpression> setExpr = cons(makeAtom("set"), cons(name, cons(functionExpr, makeNil())));
+            return eval(setExpr);
+        }
+
         case Operator::Unknown: {
             shared_ptr<SExpression> fn = lookup(operation);
 
@@ -628,7 +642,6 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
 
             return eval(body);
         }
-
     }
     throw runtime_error("eval unreachable");
 }
