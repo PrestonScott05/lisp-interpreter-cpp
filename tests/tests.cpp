@@ -705,3 +705,47 @@ TEST_SUITE("Project 1.7") {
         }
     }
 }
+
+TEST_SUITE("Project 1.8") {
+    TEST_CASE("1.8.1 def basic tests") {
+        SUBCASE("1.8.1.1 def returns the function form before eval") {
+            CHECK(callSession({"(def add2 (a b) (add a b))"}) == "(function (a b) (add a b))");
+        }
+        SUBCASE("1.8.1.2 def binds the name") {
+            CHECK(callSession({"(def add2 (a b) (add a b))", "add2"}) == "(function (a b) (add a b))");
+        }
+        SUBCASE("1.8.1.3 defined function is callable") {
+            CHECK(callSession({"(def add2 (a b) (add a b))", "(add2 3 4)"}) == "7");
+        }
+        SUBCASE("1.8.1.4 zero params") {
+            CHECK(callSession({"(def five () 5)", "(five)"}) == "5");
+        }
+    }
+
+    TEST_CASE("1.8.2 def is sugar for set + function") {
+        SUBCASE("1.8.2.1 same result as long form") {
+            CHECK(callSession({"(def f (x) (add x 1))"}) == callSession({"(set f (function (x) (add x 1)))"}));
+        }
+        SUBCASE("1.8.2.2 we get same binding as long form") {
+            CHECK(callSession({"(def f (x) (add x 1))", "(f 1)"}) == callSession({"(set f (function (x) (add x 1)))", "(f 1)"}));
+        }
+        SUBCASE("1.8.2.3 body not evaluated at definition") {
+            CHECK(localSession(requirementEnv(), {"(def bar () b)", "bar"}) == "(function () b)");
+        }
+    }
+
+    TEST_CASE("1.8.5 design decisions (documenting current behavior)") {
+        SUBCASE("1.8.5.2 def inside a body defines globally") {
+            CHECK(callSession({"(def mk () (def inner () 7))", "(mk)", "(inner)"}) == "7");
+        }
+        SUBCASE("1.8.5.3 too few args throws (unbound param falls to symbol)") {
+            CHECK_THROWS_AS(callSession({"(def add2 (a b) (add a b))", "(add2 1)"}),
+                            runtime_error);
+            localEnv = makeNil();
+        }
+        SUBCASE("1.8.5.4 localEnv clean after def'd recursion") {
+            callSession({"(def fact (n) (if (lt n 1) 1 (mul n (fact (sub n 1)))))", "(fact 5)"});
+            CHECK(isNil(localEnv));
+        }
+    }
+}
