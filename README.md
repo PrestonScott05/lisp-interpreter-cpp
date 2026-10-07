@@ -5,19 +5,6 @@ Built by Preston Lumpkins.
 
 ***Some Unit tests were written with the assisstance of Anthropic's Claude Sonnet 5***
 
-
-## Test Output: 
-
-pslum@PrestonsLaptop /cygdrive/d/academics/CS-403/projects/lisp-interpreter-cpp
-make test
-g++ -std=c++17 -Wall -Wextra -I src tests/tests.cpp -o tests/run
-./tests/run
-[doctest] doctest version is "2.4.11"
-[doctest] run with "--help" for options
-[doctest] test cases:  35 |  35 passed | 0 failed | 0 skipped
-[doctest] assertions: 180 | 180 passed | 0 failed |
-[doctest] Status: SUCCESS!
-
 ## Project 1.7/1.8 — local function calls and def syntactic sugar
 
 #### 1.7
@@ -78,3 +65,14 @@ Malformed input prints an error and the loop continues.
 - 1.8 def syntactic sugar - completed
 - next: ...
 
+## Test Output: 
+
+pslum@PrestonsLaptop /cygdrive/d/academics/CS-403/projects/lisp-interpreter-cpp
+make test
+g++ -std=c++17 -Wall -Wextra -I src tests/tests.cpp -o tests/run
+./tests/run
+[doctest] doctest version is "2.4.11"
+[doctest] run with "--help" for options
+[doctest] test cases:  35 |  35 passed | 0 failed | 0 skipped
+[doctest] assertions: 180 | 180 passed | 0 failed |
+[doctest] Status: SUCCESS!
