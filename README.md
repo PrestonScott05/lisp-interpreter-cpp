@@ -3,6 +3,8 @@
 Programming Languages (CS-403), The University of Alabama.
 Built by Preston Lumpkins. 
 
+***Some Unit tests were written with the assisstance of Anthropic's Claude Sonnet 5***
+
 
 ## Test Output: 
 
