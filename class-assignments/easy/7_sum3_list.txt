@@ -1,0 +1,8 @@
+; Problem 7: Sum of a three-element list (friend's list)
+;
+; Write (sum3List lst) that takes a list of exactly three numbers and returns
+; their sum. Do not use recursion.
+;
+; Examples:
+;   (sum3List '(3 4 5)) -> 12
+;   (sum3List '(67 67 67)) -> 201

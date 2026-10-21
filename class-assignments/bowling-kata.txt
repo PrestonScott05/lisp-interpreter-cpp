@@ -1,0 +1,72 @@
+; BOWLING KATA
+
+;   - ex: given ( 0 0 1 1 2 2 3 3 4 4 5 5 6 4 7 3 8 2 9 1 10)
+;   - ex: (10 10 10 10 10 10 10 10 10 10 10 10)
+;                                         ^  ^
+;                                     ---- bonus balls from strike in the third frame ----
+;   - 10 pins
+;   ==================================================
+;   - strike - 10 on the first role 
+;   - spare - sum of 10 on two roles of a frame  
+    ;   - gets a bonus ball (first role from the next frame)
+    ;   - scores 10 + 1 bonus ball
+;   - open frame - roll two balls, some still standing
+
+(def bowling (rolls) 
+    (score (rolls 1))
+)
+
+
+(def score (rolls frame) 
+    (cond (nil? rolls) '0
+          (eq? (car frame) 10
+            (sum rolls)
+          ) 
+    )
+)
+
+(def sum (start) 
+    (if (nil? start)
+        '0
+        (add (car start) (sum (cdr start)))
+    )
+)
+
+; solution
+
+(def bowling (balls) 
+    (bs balls 0 '(1 2 3 4 5 6 7 8 9 10))
+)
+
+(def bs (balls score frames)
+    (if (nil? frames)
+        score
+        (bs (next balls)
+            (plus
+                score
+                (score balls)
+            )
+            (cdr frames)
+        )
+    )
+)
+
+(def next (balls)
+    (if (strike? balls)
+        (cdr balls)
+        (cdr (cdr balls))
+    )
+)
+
+(def score (balls)
+    (cond 
+    (strike? balls) (sum3 balls)
+    (spare? balls) (sum3 balls)
+    't (sum2 balls)
+    )
+)
+
+(def typeframe (balls) 
+    (cond )
+
+)

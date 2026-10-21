@@ -1,0 +1,8 @@
+; Problem 2: Same (friend's list)
+;
+; Write (same a b) that returns T if a and b are the same atom, and nil
+; otherwise.
+;
+; Examples:
+;   (same 'a 'a) -> T
+;   (same 'a 'b) -> ()

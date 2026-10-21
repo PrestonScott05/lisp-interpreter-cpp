@@ -1,0 +1,50 @@
+; Problem 2: Nested ascending
+;
+; Given a list of number lists eg: '((1 2 3) (9) (4 5)), determine if all the
+; nested lists are sorted (ascending). Return false if any sub list is out of
+; order.
+
+(def check_ascending (inlist)
+    (cond (
+        (nil? inlist) 'T
+        (not? (list? inlist)) ()
+        (nil? (cdr inlist)) 'T
+        (gt? (car inlist) (car (cdr inlist))) ()
+        'T (check_ascending (cdr inlist))
+    ))
+)
+
+(def process_nested_lists (nested_list)
+    (cond (
+        (nil? nested_list) 'T
+        (not? (list? nested_list)) ()
+        (nil? (check_ascending (car nested_list))) ()
+        'T (process_nested_lists (cdr nested_list))
+    ))
+)
+
+(def gt? (num1 num2)
+    (lt num2 num1)
+)
+
+(set goodlist1 '((1 2) (3 4) (5 6)))
+(set goodlist2 '())
+(set goodlist3 '((1 1 2 2) (3) (3 4 4) (5 5 9 10)))
+(set badlist1 '((1 1) (4 33 2)))
+(set badlist2 '(3 2 1))
+(set badlist3 '((33 33) (34 25) (2 1 1 4 5 7)))
+(set badnum 1)
+
+(if (eq? (process_nested_lists goodlist1) 'T) 'PASS 'FAIL)
+(if (eq? (process_nested_lists goodlist2) 'T) 'PASS 'FAIL)
+(if (eq? (process_nested_lists goodlist3) 'T) 'PASS 'FAIL)
+(if (nil? (process_nested_lists badlist1)) 'PASS 'FAIL)
+(if (nil? (process_nested_lists badlist2)) 'PASS 'FAIL)
+(if (nil? (process_nested_lists badlist3)) 'PASS 'FAIL)
+(if (nil? (process_nested_lists badnum)) 'PASS 'FAIL)
+
+(def process_nested_lists (list)
+    (cond (
+        (nil? list) '
+    ))
+)

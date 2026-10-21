@@ -1,0 +1,86 @@
+; Problem 8: Median of three (class list #4)
+;
+; Given three numbers return the median.
+
+(def median (a b c)
+    (cond (
+        (or?
+            (and?
+                (le? a b)
+                (le? b c)
+            )
+            (and?
+                (le? c b)
+                (le? b a)
+            )
+        ) b
+        (or? 
+            (and? 
+                (le? b a)
+                (le? a c)
+            )
+            (and? 
+                (le? c a)
+                (le? a b)
+            )
+        ) a
+        (or?
+            (and? 
+                (le? a c)
+                (le? c b)
+            )
+            (and?
+                (le? b c)
+                (le? c a)
+            )
+        ) c
+    ))
+)
+
+(def le? (a b)
+    (or? 
+        (lt a b)
+        (eq? a b)
+    )
+)
+
+(set a1 1)
+(set b1 2)
+(set c1 3)
+
+(set a2 5)
+(set b2 7)
+(set c2 6)
+
+(set a3 9)
+(set b3 2)
+(set c3 11)
+
+(set a4 1)
+(set b4 2)
+(set c4 2)
+
+(set a5 10)
+(set b5 10)
+(set c5 11)
+
+(if (eq? (median a1 b1 c1) b1) 'PASS 'FAIL)
+(if (eq? (median a2 b2 c2) c2) 'PASS 'FAIL)
+(if (eq? (median a3 b3 c3) a3) 'PASS 'FAIL)
+(if
+    (or?
+        (eq? (median a4 b4 c4) b4) 
+        (eq? (median a4 b4 c4) c4)
+    ) 
+    'PASS 'FAIL
+)
+
+(if
+    (or?
+        (eq? (median a5 b5 c5) a5) 
+        (eq? (median a5 b5 c5) b5)
+    ) 
+    'PASS 'FAIL
+)
+
+

@@ -1,0 +1,9 @@
+; Problem 13: Contains (friend's list)
+;
+; Write (contains lst a) that returns T if a appears as a top-level element of
+; lst, and nil otherwise. If lst is empty or a is nil, return nil.
+;
+; Examples:
+;   (contains '(1 2 3 a 4 5) 'a) -> T
+;   (contains '(1 2 3 4 5) 'a) -> ()
+;   (contains '(1 2 3 4 5) 3) -> T

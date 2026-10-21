@@ -1,0 +1,7 @@
+; Problem 1: Sub one (friend's list)
+;
+; Write (subOne a) that returns the number a minus 1.
+;
+; Examples:
+;   (subOne 3) -> 2
+

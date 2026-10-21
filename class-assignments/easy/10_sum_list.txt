@@ -1,0 +1,8 @@
+; Problem 10: Sum list (friend's list)
+;
+; Write (sumList lst) that returns the sum of a flat list of numbers. The sum of
+; an empty list is 0.
+;
+; Examples:
+;   (sumList '(1 2 3 4 5)) -> 15
+;   (sumList '(1 2 3 4 5 6 5 4 3 2 1)) -> 36

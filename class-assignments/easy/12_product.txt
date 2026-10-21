@@ -1,0 +1,11 @@
+; Problem 12: Product (friend's list)
+;
+; Write (product lst) that returns the product of a flat list of numbers. The
+; product of an empty list is 1.
+;
+; Examples:
+;   (product '(1 2 3 4 5)) -> 120
+;   (product '(1 2 0 4 5)) -> 0
+;   (product '(1 2 3 4 50)) -> 1200
+;   (product '(0)) -> 0
+;   (product '()) -> 1

@@ -1,0 +1,3 @@
+; Problem 6: Extract min (class list #8)
+;
+; Remove the minimum from a list: (extractmin list) -> (min newlist)

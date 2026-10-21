@@ -1,0 +1,8 @@
+; Problem 9: Count (friend's list)
+;
+; Write (count lst) that returns the number of top-level elements in the list.
+;
+; Examples:
+;   (count '(6 7 6 7 6)) -> 5
+;   (count '()) -> 0
+;   (count '(p o t a t o e s)) -> 8

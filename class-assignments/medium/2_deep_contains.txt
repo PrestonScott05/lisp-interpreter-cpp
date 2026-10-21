@@ -1,0 +1,46 @@
+; Problem 2: Deep contains (class list #3)
+;
+; Given a list containing numbers and nested lists, determine if the list
+; contains the number x. The list may contain nested lists to any depth. You may
+; assume all values are lists or numbers.
+
+
+(def deep_contains (lst x)
+    (cond (
+        (nil? lst) ()
+        (not? (list? lst)) (eq? lst x)
+        'T (
+            or? 
+                (deep_contains (car lst) x)
+                (deep_contains (cdr lst) x)
+        )
+    ))
+)
+
+
+(set goodlist1 '(1 2 3))
+(set goodx1 3)
+(set goodlist2 '(1 (2 (3 (4)))))
+(set goodx2 4)
+(set goodlist3 '((1) 2))
+(set goodx3 1)
+(set goodlist4 '(5 (6 7) ((8 (9 10)) 11)))
+(set goodx4 10)
+
+(set badlist1 '())
+(set badx1 1)
+(set badlist2 '((1 2) (3)))
+(set badx2 5)
+(set badlist3 '(1 (2 (3 (4)))))
+(set badx3 0)
+(set badlist4 '(((()))))
+(set badx4 1)
+
+(if (eq? (deep_contains goodlist1 goodx1) 'T) 'PASS 'FAIL)
+(if (eq? (deep_contains goodlist2 goodx2) 'T) 'PASS 'FAIL)
+(if (eq? (deep_contains goodlist3 goodx3) 'T) 'PASS 'FAIL)
+(if (eq? (deep_contains goodlist4 goodx4) 'T) 'PASS 'FAIL)
+(if (nil? (deep_contains badlist1 badx1)) 'PASS 'FAIL)
+(if (nil? (deep_contains badlist2 badx2)) 'PASS 'FAIL)
+(if (nil? (deep_contains badlist3 badx3)) 'PASS 'FAIL)
+(if (nil? (deep_contains badlist4 badx4)) 'PASS 'FAIL)

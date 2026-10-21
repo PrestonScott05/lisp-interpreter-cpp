@@ -1,0 +1,3 @@
+; Problem 7: Flatten (class list #9)
+;
+; Write a Lisp function that flattens a list with sub lists (and sub lists).

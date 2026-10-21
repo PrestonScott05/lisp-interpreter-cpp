@@ -1,0 +1,6 @@
+; Problem 3: Rest (friend's list)
+;
+; Write (rest lst) that returns the list without its first element.
+;
+; Examples:
+;   (rest '(a b c d e f g)) -> (b c d e f g)

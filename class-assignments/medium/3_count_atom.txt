@@ -1,0 +1,20 @@
+; Problem 3: Count atom (class list #5)
+;
+; Given atom a and s-expression s, return the count of all a in s. Make no
+; assumption about s's shape.
+;
+; Note: the slide said "y's shape"; assumed to mean s.
+
+(def count_atoms (s a count)
+    (cond (
+        (nil? s) count
+        (and?
+            (atom? (car s))
+            (eq? (car s) a)
+        ) (count_atoms (cdr s) a (add count 1))
+        (list? (car s)) (and?
+                            (count_atoms (car s) a count)
+                            (count_atoms (cdr s) a count)
+                        )        
+    ))
+)

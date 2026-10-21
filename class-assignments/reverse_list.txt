@@ -1,0 +1,12 @@
+(def reverse (list)
+    (rev-helper list '())
+)
+
+(def rev-helper (list accumulator)
+    (if (nil? list)
+        accumulator
+        (rev-helper (cdr list) (cons (car list) accumulator))
+    )
+)
+
+(reverse '(1 2 3 4 5))

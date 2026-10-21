@@ -1,0 +1,44 @@
+(def infix (e)
+  (cond ((atom? e) (cons e ())
+         (nil? (cdr (cdr e))) (cons (car e) (piece (car (cdr e)) (car e) 't))
+         't (append (piece (car (cdr e)) (car e) ())(rest-terms (cdr (cdr e)) (car e)))
+        ))
+)
+
+(def append (a b)
+    (if (nil? a)
+        b
+        (cons (car a) (append (cdr a) b))   
+    )
+)
+
+(def precedence (operator)
+    (cond (
+        (eq? operator '+) 1
+        (eq? operator '-) 1
+        (eq? operator '*) 2
+        (eq? operator '/) 2
+        't 3
+    ))
+)
+
+(def non_assoc? (operator)
+    (or? (eq? operator '/) (eq? operator '-))
+)
+
+(def needs_paren? (child op right) 
+    (cond (
+        (atom? child) ()
+        (lt (precedence (car child)) (precedence op)) 't
+        (eq? (precedence (car child)) (precedence op)) (and? right (non_assoc? op))
+        't ()
+    ))
+)
+
+(def put (arg op right)
+    (cond (
+        (needs_paren? arg op right) (cons (infix arg) ())
+        't (infix arg)
+    ))
+
+

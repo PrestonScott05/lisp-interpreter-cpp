@@ -1,0 +1,9 @@
+; Problem 4: Bowling (class list #17)
+;
+; Bowling. Given a list that represents pin scores in bowling compute the game
+; score. In bowling a strike (10 on the first ball of the frame) counts 10 plus
+; the next two balls. A frame with a 10 will not have a second ball in the list.
+; A spare is a sum of 10 on two balls of the frame. A spare scores 10 plus the
+; next ball score. Other frames will score the sum of the two balls in the
+; frame. A game is 10 frames. The 10th frame may require 1 or 2 bonus balls. A
+; perfect game is (10 10 10 10 10 10 10 10 10 10 10 10) and scores 300.

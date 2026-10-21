@@ -1,0 +1,4 @@
+; Problem 1: Most frequent (class list #6)
+;
+; Given a list of numbers, return (n count) where n is the number that occurred
+; most frequently and count is the number of occurrences of n.

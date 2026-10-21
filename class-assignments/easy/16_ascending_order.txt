@@ -1,0 +1,38 @@
+; Write a Lisp function. Program ideas in no particular order. Most of these
+; have appeared on past exams but a few are new.
+;
+; Problem 16: Ascending order (class list #1)
+;
+; Given a list (flat) of numbers the function returns nil if the list is not in
+; ascending sorted order.
+
+(def check_ascending (inlist)
+    (cond (
+        (nil? inlist) 'T
+        (not? (list? inlist)) ()
+        (nil? (cdr inlist)) 'T
+        (gt? (car inlist) (car (cdr inlist))) ()
+        'T (check_ascending (cdr inlist))
+    ))
+)
+
+(def gt? (num1 num2)
+    (lt num2 num1)
+)
+;--------------
+
+(set goodlist1 '(1 2 3 4 5 6))
+(set goodlist2 '())
+(set goodlist3 '(1 1 2 2 3 3 4 4 5 5 9 10))
+(set badlist1 '(1 1 4 33 2))
+(set badlist2 '(3 2 1))
+(set badlist3 '(33 33 34 25 2 1 1 4 5 7))
+(set badnum 1)
+
+(if (eq? (check_ascending goodlist1) 'T) 'PASS 'FAIL)
+(if (eq? (check_ascending goodlist2) 'T) 'PASS 'FAIL)
+(if (eq? (check_ascending goodlist3) 'T) 'PASS 'FAIL)
+(if (nil? (check_ascending badlist1)) 'PASS 'FAIL)
+(if (nil? (check_ascending badlist2)) 'PASS 'FAIL)
+(if (nil? (check_ascending badlist3)) 'PASS 'FAIL)
+(if (il? (check_ascending badnum)) 'PASS 'FAIL)

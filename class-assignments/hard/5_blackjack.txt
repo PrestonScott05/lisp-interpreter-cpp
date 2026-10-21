@@ -1,0 +1,11 @@
+; Problem 5: Blackjack (class list #18)
+;
+; Blackjack. Given a list representing a hand in Blackjack score the hand.
+; Represent cards by the pip value (1-13) where 1 is an Ace, 11 is Jack, 12 is
+; Queen, 13 is King. A hand may have 2-5 cards. Aces count 1 or 11. Face cards
+; count as 10. We want the maximum score under 21 that is possible by a given
+; hand. Or the minimum score if the hand value is over 21.
+; Eg (1, 1, 10, 11) -> 22
+;
+; Note: "under 21" likely means "21 or under" (a 21 should count); confirm with
+; the professor.

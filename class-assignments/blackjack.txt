@@ -1,0 +1,18 @@
+(def (card-value (c)
+  (if (> c 10)
+      10
+      c)))
+
+
+(def (hand-sum (hand)
+  (if (null? hand)
+      0
+      (add (card-value (car hand)) (hand-sum (cdr hand))))))
+
+
+(def (count-aces (hand)
+  (if (null? hand)
+      0
+      (if (eqQ (car hand) 1)
+          (add 1 (count-aces (cdr hand)))
+          (count-aces (cdr hand))))))

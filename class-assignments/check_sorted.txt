@@ -1,0 +1,8 @@
+(def check_sorted (list)
+    (cond (
+        (nil? list) 'T
+        (nil? (cdr list)) 'T
+        (lt (car (cdr list)) (car list)) ()
+        'T (check_sorted (cdr list))
+    ))
+)

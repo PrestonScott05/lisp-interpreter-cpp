@@ -1,0 +1,3 @@
+; Problem 7: Prefix/postfix to infix (class list #13)
+;
+; Turn a prefix/postfix expression into an infix expression.

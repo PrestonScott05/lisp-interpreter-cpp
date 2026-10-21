@@ -1,0 +1,6 @@
+; Problem 6: Sum of three (friend's list)
+;
+; Write (sum3 a b c) that returns the sum of the three numbers.
+;
+; Examples:
+;   (sum3 3 4 5) -> 12

@@ -1,0 +1,11 @@
+; Problem 4: Bigger (friend's list)
+;
+; Write (bigger a b) that returns the larger of the two numbers a and b. If they
+; are equal, return either one.
+;
+; Examples:
+;   (bigger 9 9) -> 9
+;   (bigger 5 6) -> 6
+;   (bigger 2 1) -> 2
+;
+; Note: this interpreter has lt but no gt builtin.
