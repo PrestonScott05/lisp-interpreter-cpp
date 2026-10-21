@@ -179,12 +179,24 @@ private:
     string sourceString;
     size_t pos = 0;
 
+    static bool isWhitespace(char c) {
+        return isspace(static_cast<unsigned char>(c)) || c == ',';
+    }
+
+    static bool isDelimiter(char c) {
+        return isWhitespace(c) || c == '(' || c == ')' || c == '\'' || c == ';';
+    }
+
     void skipWhitespace() {
         while (!atEnd()) {
             char current = peek();
 
-            if (isspace(static_cast<unsigned char>(current)) || current == ',') {
+            if (isWhitespace(current)) {
                 advance();
+            } else if (current == ';') {
+                while (!atEnd() && peek() != '\n') {
+                    advance();
+                }
             } else {
                 break;
             }
@@ -196,7 +208,7 @@ private:
 
         while (!atEnd()) {
             char c = peek();
-            if (c == ' ' || c == '\n' || c == '\t' || c == '\r' || c == '(' || c == ')' || c == ',' || c == '\'') {
+            if (isWhitespace(c) || isDelimiter(c)) {
                 break;
             }
 
@@ -384,264 +396,275 @@ inline shared_ptr<SExpression> evalList(shared_ptr<SExpression> args) {
 } 
 
 inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
-    if (isAtom(expression)) return lookup(expression);
-    if (isNil(expression)) return expression;
+    LocalEnvGuard guard;    
 
-    shared_ptr<SExpression> operation = car(expression);
+    while (true) {
+        if (isAtom(expression)) return lookup(expression);
+        if (isNil(expression)) return expression;
 
-    if (!isAtom(operation)) {
-        return expression;
-    }
+        shared_ptr<SExpression> operation = car(expression);
 
-    switch(toOp(operation->atomValue)) {
-        case Operator::Quote: {
-            shared_ptr<SExpression> arg = car(cdr(expression));
-            return arg;
-        }
-        case Operator::Car: {
-            shared_ptr<SExpression> arg = eval(car(cdr(expression)));
-            if (!isPair(arg)) throw runtime_error("car not a pair: " + exprToString(arg));
-            return car(arg);
-        }
-        case Operator::Cdr: {
-            shared_ptr<SExpression> arg = eval(car(cdr(expression)));
-            if (!isPair(arg)) throw runtime_error("cdr not a pair: " + exprToString(arg));
-            return cdr(arg);
-        }
-        case Operator::Cons: {
-            shared_ptr<SExpression> a = car(cdr(expression));
-            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
-            return cons(eval(a), eval(b));  
-        }
-        case Operator::Eval: {
-            shared_ptr<SExpression> arg = car(cdr(expression));
-            return eval(eval(arg));
-        }
-        case Operator::Set: {
-            shared_ptr<SExpression> name = car(cdr(expression));
-            shared_ptr<SExpression> value = car(cdr(cdr(expression)));
-
-            shared_ptr<SExpression> value_result = eval(value);
-
-            rho = cons(list(name, value_result), rho);
-            return value_result;
-        }
-
-        //---
-        case Operator::Nil_q: {
-            shared_ptr<SExpression> arg = car(cdr(expression));
-
-            if (isNil(eval(arg))) {
-                return TRUE_;
-            } else {
-                return FALSE_;
-            }
-        }
-        case Operator::Atom_q: {
-            shared_ptr<SExpression> arg = car(cdr(expression));
-
-            if (isAtom(eval(arg))) {
-                return TRUE_;
-            } else {
-                return FALSE_;
-            }
-        }
-        case Operator::List_q: {
-            shared_ptr<SExpression> arg = car(cdr(expression));
-
-            if (isPair(eval(arg))) {
-                return TRUE_;
-            } else {
-                return FALSE_;
-            }
-        }
-        case Operator::Number_q: {
-            shared_ptr<SExpression> arg = car(cdr(expression));
-            shared_ptr<SExpression> result = eval(arg);
-
-            if (!isAtom(result)) {
-                return FALSE_;
-            }
-
-            if (isInteger(result->atomValue)) {
-                return TRUE_;
-            } else {
-                return FALSE_;
-            }
-        }
-
-        //---
-        case Operator::And_q: {
-            shared_ptr<SExpression> a = car(cdr(expression));
-            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
-
-            shared_ptr<SExpression> aRes = eval(a);
-
-            if (isNil(aRes)) {
-                return FALSE_;
-            } else {
-                shared_ptr<SExpression> bRes = eval(b);
-                if (isNil(bRes)) {
-                    return FALSE_;
-                } else {
-                    return TRUE_;
-                }
-
-            }
-        }
-        case Operator::Or_q: {
-            shared_ptr<SExpression> a = car(cdr(expression));
-            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
-
-            shared_ptr<SExpression> aRes = eval(a);
-            
-            if (!isNil(aRes)) {
-                return TRUE_;
-            } else {
-                shared_ptr<SExpression> bRes = eval(b);
-                if (!isNil(bRes)) {
-                    return TRUE_;
-                } else {
-                    return FALSE_;
-                }
-            }
-        }
-        case Operator::Eq_q: {
-            shared_ptr<SExpression> a = car(cdr(expression));
-            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
-            shared_ptr<SExpression> aRes = eval(a);
-            shared_ptr<SExpression> bRes = eval(b);
-
-            if (!isAtom(aRes) || !isAtom(bRes)) {
-                return FALSE_;
-            } else {
-                return aRes->atomValue == bRes->atomValue ? TRUE_ : FALSE_;
-            }
-        }
-        case Operator::If: {
-            shared_ptr<SExpression> condition = car(cdr(expression));
-            shared_ptr<SExpression> evalIfTrue = car(cdr(cdr(expression)));
-            shared_ptr<SExpression> elsePart = cdr(cdr(cdr(expression)));
-
-            if (!isNil(eval(condition))) {
-                return eval(evalIfTrue);
-            }
-            
-            if (isNil(elsePart)) {
-                return FALSE_;              
-            }
-            return eval(car(elsePart));
-        }
-        case Operator::Cond: {
-            shared_ptr<SExpression> clauses = car(cdr(expression));
-            while (isPair(clauses)) {
-                shared_ptr<SExpression> a = car(clauses);
-                shared_ptr<SExpression> b = car(cdr(clauses));
-
-                if (!isNil(eval(a))) {
-                    return eval(b);
-                }
-
-                clauses = cdr(cdr(clauses));
-            }
-
-            throw runtime_error("no clauses were not nil and thus cannot be evaluated");
-        }
-
-        //---
-        case Operator::Add: {
-            shared_ptr<SExpression> a = car(cdr(expression));
-            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
-
-            int res = toInteger(eval(a)) + toInteger(eval(b));
-
-            return makeAtom(to_string(res));
-        }
-        case Operator::Subtract: {
-            shared_ptr<SExpression> a = car(cdr(expression));
-            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
-
-            int res = toInteger(eval(a)) - toInteger(eval(b));
-
-            return makeAtom(to_string(res));
-        }
-
-        case Operator::Multiply: {
-            shared_ptr<SExpression> a = car(cdr(expression));
-            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
-
-            int res = toInteger(eval(a)) * toInteger(eval(b));
-
-            return makeAtom(to_string(res));
-        }
-
-        case Operator::Divide: {
-            shared_ptr<SExpression> a = car(cdr(expression));
-            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
-
-            int bAsInt = toInteger(eval(b));
-            if (bAsInt == 0) {
-                throw runtime_error("divide by zero error");
-            }
-
-            int res = toInteger(eval(a)) / bAsInt;
-
-            return makeAtom(to_string(res));
-        }
-
-        case Operator::Remainder: {
-            shared_ptr<SExpression> a = car(cdr(expression));
-            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
-
-            int bAsInt = toInteger(eval(b));
-
-            if (bAsInt == 0) {
-                throw runtime_error("remainder by zero error");
-            }
-
-            int res = toInteger(eval(a)) % bAsInt;
-
-            return makeAtom(to_string(res));
-        }
-
-        case Operator::LessThan: {
-            shared_ptr<SExpression> a = car(cdr(expression));
-            shared_ptr<SExpression> b = car(cdr(cdr(expression)));
-
-            return toInteger(eval(a)) < toInteger(eval(b)) ? TRUE_ : FALSE_;
-        }
-
-        //---
-        case Operator::Function: {
+        if (!isAtom(operation)) {
             return expression;
         }
-        case Operator::Def: {
-            shared_ptr<SExpression> name = car(cdr(expression));
-            shared_ptr<SExpression> parameters = car(cdr(cdr(expression)));
-            shared_ptr<SExpression> body = car(cdr(cdr(cdr(expression))));
-            
 
-            shared_ptr<SExpression> functionExpr = cons(makeAtom("function"), cons(parameters, cons(body, makeNil())));
+        switch(toOp(operation->atomValue)) {
+            case Operator::Quote: {
+                shared_ptr<SExpression> arg = car(cdr(expression));
+                return arg;
+            }
+            case Operator::Car: {
+                shared_ptr<SExpression> arg = eval(car(cdr(expression)));
+                if (!isPair(arg)) throw runtime_error("car not a pair: " + exprToString(arg));
+                return car(arg);
+            }
+            case Operator::Cdr: {
+                shared_ptr<SExpression> arg = eval(car(cdr(expression)));
+                if (!isPair(arg)) throw runtime_error("cdr not a pair: " + exprToString(arg));
+                return cdr(arg);
+            }
+            case Operator::Cons: {
+                shared_ptr<SExpression> a = car(cdr(expression));
+                shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+                return cons(eval(a), eval(b));  
+            }
+            case Operator::Eval: {
+                shared_ptr<SExpression> arg = car(cdr(expression));
+                expression = eval(arg);
+                continue;
+            }
+            case Operator::Set: {
+                shared_ptr<SExpression> name = car(cdr(expression));
+                shared_ptr<SExpression> value = car(cdr(cdr(expression)));
 
-            shared_ptr<SExpression> setExpr = cons(makeAtom("set"), cons(name, cons(functionExpr, makeNil())));
-            return eval(setExpr);
+                shared_ptr<SExpression> value_result = eval(value);
+
+                rho = cons(list(name, value_result), rho);
+                return value_result;
+            }
+
+            //---
+            case Operator::Nil_q: {
+                shared_ptr<SExpression> arg = car(cdr(expression));
+
+                if (isNil(eval(arg))) {
+                    return TRUE_;
+                } else {
+                    return FALSE_;
+                }
+            }
+            case Operator::Atom_q: {
+                shared_ptr<SExpression> arg = car(cdr(expression));
+
+                if (isAtom(eval(arg))) {
+                    return TRUE_;
+                } else {
+                    return FALSE_;
+                }
+            }
+            case Operator::List_q: {
+                shared_ptr<SExpression> arg = car(cdr(expression));
+
+                if (isPair(eval(arg))) {
+                    return TRUE_;
+                } else {
+                    return FALSE_;
+                }
+            }
+            case Operator::Number_q: {
+                shared_ptr<SExpression> arg = car(cdr(expression));
+                shared_ptr<SExpression> result = eval(arg);
+
+                if (!isAtom(result)) {
+                    return FALSE_;
+                }
+
+                if (isInteger(result->atomValue)) {
+                    return TRUE_;
+                } else {
+                    return FALSE_;
+                }
+            }
+
+            //---
+            case Operator::And_q: {
+                shared_ptr<SExpression> a = car(cdr(expression));
+                shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+
+                shared_ptr<SExpression> aRes = eval(a);
+
+                if (isNil(aRes)) {
+                    return FALSE_;
+                } else {
+                    shared_ptr<SExpression> bRes = eval(b);
+                    if (isNil(bRes)) {
+                        return FALSE_;
+                    } else {
+                        return TRUE_;
+                    }
+
+                }
+            }
+            case Operator::Or_q: {
+                shared_ptr<SExpression> a = car(cdr(expression));
+                shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+
+                shared_ptr<SExpression> aRes = eval(a);
+                
+                if (!isNil(aRes)) {
+                    return TRUE_;
+                } else {
+                    shared_ptr<SExpression> bRes = eval(b);
+                    if (!isNil(bRes)) {
+                        return TRUE_;
+                    } else {
+                        return FALSE_;
+                    }
+                }
+            }
+            case Operator::Eq_q: {
+                shared_ptr<SExpression> a = car(cdr(expression));
+                shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+                shared_ptr<SExpression> aRes = eval(a);
+                shared_ptr<SExpression> bRes = eval(b);
+
+                if (!isAtom(aRes) || !isAtom(bRes)) {
+                    return FALSE_;
+                } else {
+                    return aRes->atomValue == bRes->atomValue ? TRUE_ : FALSE_;
+                }
+            }
+            case Operator::If: {
+                shared_ptr<SExpression> condition = car(cdr(expression));
+                shared_ptr<SExpression> evalIfTrue = car(cdr(cdr(expression)));
+                shared_ptr<SExpression> elsePart = cdr(cdr(cdr(expression)));
+
+                if (!isNil(eval(condition))) {
+                    expression = evalIfTrue;
+                    continue;
+                }
+    
+                if (isNil(elsePart)) {
+                    return FALSE_;              
+                }
+                expression = car(elsePart);
+                continue;
+            }
+            case Operator::Cond: {
+                shared_ptr<SExpression> clauses = car(cdr(expression));
+                shared_ptr<SExpression> chosen = nullptr;
+                while (isPair(clauses)) {
+                    shared_ptr<SExpression> a = car(clauses);
+                    shared_ptr<SExpression> b = car(cdr(clauses));
+
+                    if (!isNil(eval(a))) {
+                        chosen = b;
+                        break;
+                    }
+
+                    clauses = cdr(cdr(clauses));
+                }
+
+                if (!chosen) throw runtime_error("no cond clause matched");
+                expression = chosen;
+                continue;
+            }
+
+            //---
+            case Operator::Add: {
+                shared_ptr<SExpression> a = car(cdr(expression));
+                shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+
+                int res = toInteger(eval(a)) + toInteger(eval(b));
+
+                return makeAtom(to_string(res));
+            }
+            case Operator::Subtract: {
+                shared_ptr<SExpression> a = car(cdr(expression));
+                shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+
+                int res = toInteger(eval(a)) - toInteger(eval(b));
+
+                return makeAtom(to_string(res));
+            }
+
+            case Operator::Multiply: {
+                shared_ptr<SExpression> a = car(cdr(expression));
+                shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+
+                int res = toInteger(eval(a)) * toInteger(eval(b));
+
+                return makeAtom(to_string(res));
+            }
+
+            case Operator::Divide: {
+                shared_ptr<SExpression> a = car(cdr(expression));
+                shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+
+                int bAsInt = toInteger(eval(b));
+                if (bAsInt == 0) {
+                    throw runtime_error("divide by zero error");
+                }
+
+                int res = toInteger(eval(a)) / bAsInt;
+
+                return makeAtom(to_string(res));
+            }
+
+            case Operator::Remainder: {
+                shared_ptr<SExpression> a = car(cdr(expression));
+                shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+
+                int bAsInt = toInteger(eval(b));
+
+                if (bAsInt == 0) {
+                    throw runtime_error("remainder by zero error");
+                }
+
+                int res = toInteger(eval(a)) % bAsInt;
+
+                return makeAtom(to_string(res));
+            }
+
+            case Operator::LessThan: {
+                shared_ptr<SExpression> a = car(cdr(expression));
+                shared_ptr<SExpression> b = car(cdr(cdr(expression)));
+
+                return toInteger(eval(a)) < toInteger(eval(b)) ? TRUE_ : FALSE_;
+            }
+
+            //---
+            case Operator::Function: {
+                return expression;
+            }
+            case Operator::Def: {
+                shared_ptr<SExpression> name = car(cdr(expression));
+                shared_ptr<SExpression> parameters = car(cdr(cdr(expression)));
+                shared_ptr<SExpression> body = car(cdr(cdr(cdr(expression))));
+                
+
+                shared_ptr<SExpression> functionExpr = cons(makeAtom("function"), cons(parameters, cons(body, makeNil())));
+
+                shared_ptr<SExpression> setExpr = cons(makeAtom("set"), cons(name, cons(functionExpr, makeNil())));
+                return eval(setExpr);
+            }
+
+            case Operator::Unknown: {
+                shared_ptr<SExpression> fn = lookup(operation);
+
+                if (!isPair(fn) || car(fn)->atomValue != "function") return expression;
+
+                shared_ptr<SExpression> params = car(cdr(fn));
+                shared_ptr<SExpression> body = car(cdr(cdr(fn)));
+
+                shared_ptr<SExpression> actuals = evalList(cdr(expression));
+
+                localEnv = cons(list(params, actuals), guard.saved);
+                expression = body;
+                continue;
+            }
         }
-
-        case Operator::Unknown: {
-            shared_ptr<SExpression> fn = lookup(operation);
-
-            if (!isPair(fn) || car(fn)->atomValue != "function") return expression;
-
-            shared_ptr<SExpression> params = car(cdr(fn));
-            shared_ptr<SExpression> body = car(cdr(cdr(fn)));
-
-            shared_ptr<SExpression> actuals = evalList(cdr(expression));
-
-            LocalEnvGuard guard;
-            localEnv = cons(list(params, actuals), localEnv);
-
-            return eval(body);
-        }
-    }
-    throw runtime_error("eval unreachable");
+        
+    } //while
+    
 }
