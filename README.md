@@ -3,24 +3,17 @@
 Programming Languages (CS-403), The University of Alabama.
 Built by Preston Lumpkins. 
 
-***Some Unit tests were written with the assisstance of Anthropic's Claude Sonnet 5***
+***Some Unit tests were written with the assistance of Anthropic's Claude Sonnet 5***
 
-## Project 1.7/1.8 — local function calls and def syntactic sugar
-
-#### 1.7
-- sets functions
-- gathers parameters and pushes onto the local stack
-- recursively evaluates function body
-
-#### 1.8
-- def acts as syntactic sugar. 
+## About
+This is a fully functinoal lisp interpreter with a reader, evaluator, environment handler, special forms, and user defined functions. It follows the specifications set by Professor Donald Yessick - CS-403 - Fall 2026
 
 ## layout
 src/
     sexpression.h
     main.cpp
 test/
-    test.cpp
+    tests.cpp
     doctest.h (framework);
 
 Makefile
@@ -40,6 +33,7 @@ Run with no input redirected for an interactive prompt:
 ./repl
 => <expression>
 <evaluated expression>
+
 ---
 
 End the session with Ctrl-C or pipe / redirect input, which prints each result with no prompt:
@@ -63,7 +57,7 @@ Malformed input prints an error and the loop continues.
 - 1.6 local env - completed
 - 1.7 function calls - completed
 - 1.8 def syntactic sugar - completed
-- next: ...
+- next: nothing! We're finished!
 
 ## Test Output: 
 
