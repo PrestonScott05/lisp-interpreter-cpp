@@ -1,3 +1,0 @@
-; Problem 17: Append (class list #11)
-;
-; Append two lists.

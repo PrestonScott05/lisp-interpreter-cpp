@@ -1,6 +1,0 @@
-; Problem 5: Second (friend's list)
-;
-; Write (second lst) that returns the second element of the list.
-;
-; Examples:
-;   (second '(a b c d)) -> b

@@ -1,3 +1,0 @@
-; Problem 18: Reverse (class list #16)
-;
-; Reverse a list.
