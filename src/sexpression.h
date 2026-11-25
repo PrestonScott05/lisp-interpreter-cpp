@@ -7,6 +7,7 @@
 #include <cctype>
 #include <stdexcept>
 #include <sstream>
+#include <fstream>
 
 using namespace std;
 
@@ -16,7 +17,9 @@ enum class ExpressionType {
     Nil, 
     Atom, 
     Pair,
-    Closure
+    Closure, 
+    String, 
+    Void,
 };
 
 enum class Operator {
@@ -47,6 +50,8 @@ enum class Operator {
     Def,
 
     Lambda, Begin, Let, LetStar, SetBang, While,
+
+    Display, Newline, Readline, Load, String_q, StringAppend, StringLength,
 
     Unknown,
 };
@@ -96,6 +101,22 @@ inline shared_ptr<SExpression> localEnv = makeNil();
 const inline shared_ptr<SExpression> TRUE_ = makeAtom("T");
 const inline shared_ptr<SExpression> FALSE_ = makeNil();
 
+inline shared_ptr<SExpression> makeString(string value) {
+    shared_ptr<SExpression> str = make_shared<SExpression>();
+
+    str->type = ExpressionType::String;
+    str->atomValue = move(value);
+    
+    return str;
+}
+
+const inline shared_ptr<SExpression> VOID_ = [] {
+    auto v = make_shared<SExpression>();
+
+    v->type = ExpressionType::Void;
+    return v;
+}();
+
 inline bool isNil(shared_ptr<SExpression> node) {
     return node->type == ExpressionType::Nil;
 }
@@ -110,6 +131,14 @@ inline bool isPair(shared_ptr<SExpression> node) {
 
 inline bool isClosure(shared_ptr<SExpression> node) {
     return node->type == ExpressionType::Closure;
+}
+
+inline bool isString(shared_ptr<SExpression> node) {
+    return node->type == ExpressionType::String;
+}
+
+inline bool isVoid(shared_ptr<SExpression> node) {
+    return node->type == ExpressionType::Void;
 }
 
 inline bool isInteger(const string &s) {
@@ -169,6 +198,10 @@ public:
 
             return result;
         }
+
+        if (curr == '"') {
+            return readString();
+        }
         
         if (curr == '(') {
             return readList();
@@ -191,7 +224,7 @@ private:
     }
 
     static bool isDelimiter(char c) {
-        return isWhitespace(c) || c == '(' || c == ')' || c == '\'' || c == ';';
+        return isWhitespace(c) || c == '(' || c == ')' || c == '\'' || c == ';' || c == '"';
     }
 
     void skipWhitespace() {
@@ -223,6 +256,38 @@ private:
         }
 
         return makeAtom(result);
+    }
+
+    shared_ptr<SExpression> readString() {
+        advance();
+        string result;
+
+        while(true) {
+            if (atEnd()) throw runtime_error("unterminated string literal");
+
+            char c = advance();
+            if (c == '"') {
+                break;
+            }
+
+            if (c == '\\') {
+                if (atEnd()) throw runtime_error("unterminated string literal");
+
+                char esc = advance();
+                switch(esc) {
+                    case 'n': result += '\n'; break;
+                    case 't': result += '\t'; break;
+                    case '"': result += '"'; break;
+                    case '\\': result += '\\'; break;
+
+                    default: throw runtime_error(string("unknown escape: \\") + esc);
+                }
+            }
+            else {
+                result += c;
+            }
+        }
+        return makeString(result);
     }
 
     shared_ptr<SExpression> readList() {
@@ -283,6 +348,20 @@ inline string exprToString(const shared_ptr<SExpression> &expr) {
 
     if(isClosure(expr)) return "#<closure>";
 
+    if (isVoid(expr)) return "";
+
+    if (isString(expr)) {
+        string out = "\"";
+        for (char c : expr->atomValue) {
+            if (c == '"') out += "\\\"";
+            else if (c == '\\') out += "\\\\";
+            else if (c == '\n') out += "\\n";
+            else if (c == '\t') out += "\\t";
+            else out += c;
+        }
+        return out + "\"";
+    }
+
     string out = "(";
 
     auto cur = expr;
@@ -303,6 +382,11 @@ inline string exprToString(const shared_ptr<SExpression> &expr) {
     }
 
     return out + ")";
+}
+
+inline string displayString(const shared_ptr<SExpression> &expr) {
+    if (isString(expr)) return expr->atomValue;
+    return exprToString(expr);
 }
 
 inline int toInteger(const shared_ptr<SExpression> &node) {
@@ -423,6 +507,14 @@ inline Operator toOp(const string &s) {
     if (s == "set!") return Operator::SetBang;
     if (s == "while") return Operator::While;
 
+    if (s == "display") return Operator::Display;
+    if (s == "newline") return Operator::Newline;
+    if (s == "read-line") return Operator::Readline;
+    if (s == "load") return Operator::Load;
+    if (s == "string?") return Operator::String_q;
+    if (s == "string-append") return Operator::StringAppend;
+    if (s == "string-length") return Operator::StringLength;
+
     return Operator::Unknown;
 }
 
@@ -447,6 +539,7 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
     while (true) {
         if (isAtom(expression)) return lookup(expression);
         if (isNil(expression)) return expression;
+        if (isString(expression) || isVoid(expression)) return expression;
 
         shared_ptr<SExpression> operation = car(expression);
 
@@ -584,6 +677,10 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
                 shared_ptr<SExpression> b = car(cdr(cdr(expression)));
                 shared_ptr<SExpression> aRes = eval(a);
                 shared_ptr<SExpression> bRes = eval(b);
+
+                if (isString(aRes) && isString(bRes)) {
+                    return aRes->atomValue == bRes->atomValue ? TRUE_ : FALSE_;
+                } 
 
                 if (!isAtom(aRes) || !isAtom(bRes)) {
                     return FALSE_;
@@ -785,6 +882,67 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
             }
 
 
+            case Operator::Display: {
+                for (auto arg = cdr(expression); isPair(arg); arg = cdr(arg)) {
+                    cout << displayString(eval(car(arg)));
+                }
+
+                cout << flush;
+                return VOID_;
+            }
+
+            case Operator::Newline: {
+                cout << "\n" << flush;
+                return VOID_;
+            }
+
+            case Operator::Readline: {
+                string line;
+                if (!getline(cin, line)) return FALSE_;
+                return makeString(line);
+            }
+
+            case Operator::Load: {
+                shared_ptr<SExpression> path = eval(car(cdr(expression)));
+                if (!isString(path)) throw runtime_error("load expects a string path, got: " + exprToString(path));
+
+                ifstream file(path->atomValue);
+                if (!file) throw runtime_error("could not open file: " + path->atomValue);
+
+                stringstream buffer;
+                buffer << file.rdbuf();
+
+                Reader reader(buffer.str());
+                while (reader.hasMoreStuff()) {
+                    eval(reader.read());
+                }
+
+                return VOID_;
+            }
+
+            case Operator::String_q: {
+                return isString(eval(car(cdr(expression)))) ? TRUE_ : FALSE_;            
+            }
+
+            case Operator::StringAppend: {
+                string result;
+                for (auto arg = cdr(expression); isPair(arg); arg = cdr(arg)) {
+                    shared_ptr<SExpression> value = eval(car(arg));
+
+                    if (!isString(value)) throw runtime_error("string-append expects strings, got: " + exprToString(value));
+
+                    result += value->atomValue;
+                }
+
+                return makeString(result);
+            }
+
+            case Operator::StringLength: {
+                shared_ptr<SExpression> value = eval(car(cdr(expression)));
+                if (!isString(value)) throw runtime_error("string-length expects a string, got: " + exprToString(value));
+
+                return makeAtom(to_string(value->atomValue.size()));
+            }
 
             case Operator::Unknown: {
                 shared_ptr<SExpression> fn = lookup(operation);

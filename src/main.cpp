@@ -6,7 +6,12 @@ static void processChunk(const string &src) {
 
     try {
         while (reader.hasMoreStuff()) {
-            print(eval(reader.read()));
+            shared_ptr<SExpression> result = eval(reader.read());
+            
+            if (isVoid(result)) continue;
+
+            print(result);
+
             cout << "\n";
         }
     } catch (const exception &ex) {
@@ -28,13 +33,18 @@ int main() {
         pending += line;
         pending += '\n';
 
-        for (char c : line) {
-            if (c == '(') {
-                depth++;
+        bool inString = false;
+        for (size_t i = 0; i < line.size(); i++) {
+            char c = line[i];
+
+            if (inString) {
+                if (c == '\\') i++;
+                else if (c == '"') inString = false;
             }
-            else if (c == ')') {
-                depth--;
-            }
+            else if (c == '"') inString = true;
+            else if (c == ';') break;
+            else if (c == '(') depth++;
+            else if (c == ')') depth--;
         }
 
         if (depth <= 0) {

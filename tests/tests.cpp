@@ -880,3 +880,162 @@ TEST_SUITE("final project extensions") {
         }
     }
 }  
+
+
+static string captureOutput(const vector<string> &expressions) {
+    ostringstream captured;
+    streambuf *old = cout.rdbuf(captured.rdbuf());
+    try {
+        testSession(expressions);
+    } catch (...) {
+        cout.rdbuf(old);
+        throw;
+    }
+    cout.rdbuf(old);
+    return captured.str();
+}
+
+
+static string withInput(const string &input, const vector<string> &expressions) {
+    istringstream fake(input);
+    streambuf *old = cin.rdbuf(fake.rdbuf());
+    string result = testSession(expressions);
+    cin.rdbuf(old);
+    return result;
+}
+
+TEST_SUITE("final project batch 2: strings + io") {
+    TEST_CASE("S.1 string literals") {
+        SUBCASE("S.1.1 reader reads a string") {
+            CHECK(exprToString(parse("\"hello\"")) == "\"hello\"");
+        }
+        SUBCASE("S.1.2 strings evaluate to themselves") {
+            CHECK(testSession({"\"hi there\""}) == "\"hi there\"");
+        }
+        SUBCASE("S.1.3 parens and quotes inside a string are just text") {
+            CHECK(testSession({"\"(not a list)\""}) == "\"(not a list)\"");
+        }
+        SUBCASE("S.1.4 escapes round-trip") {
+            CHECK(testSession({"\"a\\\"b\\\\c\\nd\""}) == "\"a\\\"b\\\\c\\nd\"");
+        }
+        SUBCASE("S.1.5 string inside a list") {
+            CHECK(testSession({"'(1 \"two\" 3)"}) == "(1 \"two\" 3)");
+        }
+        SUBCASE("S.1.6 unterminated string throws") {
+            CHECK_THROWS_AS(parse("\"oops"), runtime_error);
+        }
+        SUBCASE("S.1.7 string bound toa variable") {
+            CHECK(testSession({"(set name \"Preston\")", "name"}) == "\"Preston\"");
+        }
+    }
+
+    TEST_CASE("S.2 string builtins") {
+        SUBCASE("S.2.1 string? true for strings") {
+            CHECK(testSession({"(string? \"x\")"}) == "T");
+        }
+        SUBCASE("S.2.2 string? false for symbols and numbers") {
+            CHECK(testSession({"(string? 'x)"}) == "()");
+            CHECK(testSession({"(string? 5)"}) == "()");
+        }
+        SUBCASE("S.2.3 string-append joins any number of strings") {
+            CHECK(testSession({"(string-append \"a\" \"b\" \"c\")"}) == "\"abc\"");
+        }
+        SUBCASE("S.2.4 string-append with no args") {
+            CHECK(testSession({"(string-append)"}) == "\"\"");
+        }
+        SUBCASE("S.2.5 string-append rejects non-strings") {
+            CHECK_THROWS_AS(testSession({"(string-append \"a\" 5)"}), runtime_error);
+        }
+        SUBCASE("S.2.6 string-length") {
+            CHECK(testSession({"(string-length \"hello\")"}) == "5");
+            CHECK(testSession({"(string-length \"\")"}) == "0");
+        }
+        SUBCASE("S.2.7 eq? compares string contents") {
+            CHECK(testSession({"(eq? \"ab\" (string-append \"a\" \"b\"))"}) == "T");
+            CHECK(testSession({"(eq? \"ab\" \"ba\")"}) == "()");
+        }
+        SUBCASE("S.2.8 a string is not the symbol with the same name") {
+            CHECK(testSession({"(eq? \"x\" 'x)"}) == "()");
+        }
+    }
+
+    TEST_CASE("S.3 display / newline") {
+        SUBCASE("S.3.1 display prints strings without quotes") {
+            CHECK(captureOutput({"(display \"hi\")"}) == "hi");
+        }
+        SUBCASE("S.3.2 display prints other values normally") {
+            CHECK(captureOutput({"(display '(1 2))"}) == "(1 2)");
+            CHECK(captureOutput({"(display (add 2 3))"}) == "5");
+        }
+        SUBCASE("S.3.3 display takes multiple args") {
+            CHECK(captureOutput({"(display \"x = \" 42)"}) == "x = 42");
+        }
+        SUBCASE("S.3.4 newline prints a newline") {
+            CHECK(captureOutput({"(newline)"}) == "\n");
+        }
+        SUBCASE("S.3.5 display and newline return void") {
+            ostringstream sink;
+
+            streambuf *old = cout.rdbuf(sink.rdbuf());
+            
+            string displayResult = testSession({"(display \"x\")"});
+            string newlineResult = testSession({"(newline)"});
+            
+            cout.rdbuf(old);
+            
+            CHECK(displayResult == "");
+            CHECK(newlineResult == "");
+        }
+        SUBCASE("S.3.6 printing inside a loop") {
+            CHECK(captureOutput({"(set i 0)",
+                                 "(while (lt i 3) (display i) (set! i (add i 1)))"}) == "012");
+        }
+        SUBCASE("S.3.7 printing from a closure") {
+            CHECK(captureOutput({"(set greet (lambda (who) (display \"hi \" who) (newline)))",
+                                 "(greet \"Preston\")"}) == "hi Preston\n");
+        }
+    }
+
+    TEST_CASE("S.4 read-line") {
+        SUBCASE("S.4.1 reads one line as a string") {
+            CHECK(withInput("hello world\n", {"(read-line)"}) == "\"hello world\"");
+        }
+        SUBCASE("S.4.2 successive calls read successive lines") {
+            CHECK(withInput("first\nsecond\n", {"(read-line)", "(read-line)"}) == "\"second\"");
+        }
+        SUBCASE("S.4.3 returns nil at EOF") {
+            CHECK(withInput("", {"(read-line)"}) == "()");
+        }
+        SUBCASE("S.4.4 result works with string builtins") {
+            CHECK(withInput("abc\n", {"(string-length (read-line))"}) == "3");
+        }
+    }
+
+    TEST_CASE("S.5 load") {
+        const string path = "tests/load_fixture.lisp";
+        {
+            ofstream out(path);
+            out << "; a library file\n"
+                << "(set square (lambda (x) (mul x x)))\n"
+                << "(set greeting \"loaded (with parens)\")\n";
+        }
+
+        SUBCASE("S.5.1 load defines things for later expressions") {
+            CHECK(testSession({"(load \"tests/load_fixture.lisp\")", "(square 7)"}) == "49");
+        }
+        SUBCASE("S.5.2 strings in loaded files work") {
+            CHECK(testSession({"(load \"tests/load_fixture.lisp\")", "greeting"}) == "\"loaded (with parens)\"");
+        }
+        SUBCASE("S.5.3 load returns void") {
+            CHECK(testSession({"(load \"tests/load_fixture.lisp\")"}) == "");
+        }
+        SUBCASE("S.5.4 missing file throws") {
+            CHECK_THROWS_AS(testSession({"(load \"tests/does_not_exist.lisp\")"}), runtime_error);
+        }
+        SUBCASE("S.5.5 non-string path throws") {
+            CHECK_THROWS_AS(testSession({"(load 5)"}), runtime_error);
+        }
+
+        remove(path.c_str());
+    }
+}
