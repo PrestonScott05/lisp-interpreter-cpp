@@ -583,9 +583,9 @@ TEST_SUITE("Project 1.6") {
             auto env = cons(frame("(a)", "(top)"), cons(frame("(a)", "(old)"), makeNil()));
             CHECK(localSession(env, {"a"}) == "top");
         }
-        SUBCASE("1.6.3.2 only top frame is searched") {
+        SUBCASE("1.6.3.2 outer frames are searched") {
             auto env = cons(frame("(b)", "(1)"), cons(frame("(a)", "(2)"), makeNil()));
-            CHECK(localSession(env, {"a"}) == "a");
+            CHECK(localSession(env, {"a"}) == "2");
         }
         SUBCASE("1.6.3.3 popping via cdr restores outer scope") {
             auto env = cons(frame("(a)", "(inner)"), cons(frame("(a)", "(outer)"), makeNil()));
@@ -749,3 +749,134 @@ TEST_SUITE("Project 1.8") {
         }
     }
 }
+
+
+TEST_SUITE("final project extensions") {
+    TEST_CASE("F.1 lambda and closures") {
+        SUBCASE("F.1.1 lambda goes to a closure") {
+            CHECK(testSession({"(lambda (x) x)"}) == "#<closure>");
+        }
+        SUBCASE("F.1.2 immediate application") {
+            CHECK(testSession({"((lambda (x y) (add x y)) 3 4)"}) == "7");
+        }
+        SUBCASE("F.1.3 named lambda from set") {
+            CHECK(testSession({"(set inc (lambda (x) (add x 1)))", "(inc 41)"}) == "42");
+        }
+        SUBCASE("F.1.4 closure gets its defining env") {
+            CHECK(testSession({"(set adder (lambda (n) (lambda (x) (add x n))))",
+                               "(set add5 (adder 5))", "(add5 10)"}) == "15");
+        }
+        SUBCASE("F.1.5 recursion through a global closure") {
+            CHECK(testSession({"(set fact (lambda (n) (if (lt n 1) 1 (mul n (fact (sub n 1))))))",
+                               "(fact 5)"}) == "120");
+        }
+    }
+
+    TEST_CASE("F.2 begin") {
+        SUBCASE("F.2.1 returns last value") {
+            CHECK(testSession({"(begin 1 2 3)"}) == "3");
+        }
+        SUBCASE("F.2.2 runs effects in order") {
+            CHECK(testSession({"(set x 1)", "(begin (set! x 2) (set! x (mul x 10)) x)"}) == "20");
+        }
+        SUBCASE("F.2.3 empty begin is nil") {
+            CHECK(testSession({"(begin)"}) == "()");
+        }
+    }
+
+    TEST_CASE("F.3 let / let*") {
+        SUBCASE("F.3.1 let sets locals") {
+            CHECK(testSession({"(let ((a 2) (b 3)) (mul a b))"}) == "6");
+        }
+        SUBCASE("F.3.2 let does not leak") {
+            CHECK(testSession({"(let ((zz 1)) zz)", "zz"}) == "zz");
+        }
+        SUBCASE("F.3.3 let bindings can be parallel") {
+            CHECK(testSession({"(set a 10)", "(let ((a 1) (b a)) b)"}) == "10");
+        }
+        SUBCASE("F.3.4 let* bindings can be sequential") {
+            CHECK(testSession({"(let* ((a 1) (b (add a 1))) b)"}) == "2");
+        }
+        SUBCASE("F.3.5 let body has more forms") {
+            CHECK(testSession({"(let ((a 1)) (set! a 5) a)"}) == "5");
+        }
+    }
+
+    TEST_CASE("F.4 set! and mut closures") {
+        SUBCASE("F.4.1 counter keep private state") {
+            CHECK(testSession({
+                "(set make-counter (lambda () (let ((n 0)) (lambda () (set! n (add n 1)) n))))",
+                "(set c (make-counter))", "(c)", "(c)", "(c)"}) == "3");
+        }
+        SUBCASE("F.4.2 counters are indipendent") {
+            CHECK(testSession({
+                "(set make-counter (lambda () (let ((n 0)) (lambda () (set! n (add n 1)) n))))",
+                "(set c1 (make-counter))", "(set c2 (make-counter))",
+                "(c1)", "(c1)", "(c2)"}) == "1");
+        }
+        SUBCASE("F.4.3 set! on unbound variable throws") {
+            CHECK_THROWS_AS(testSession({"(set! nope 1)"}), runtime_error);
+            localEnv = makeNil();
+        }
+    }
+
+    TEST_CASE("F.5 while") {
+        SUBCASE("F.5.1 sums 1..10") {
+            CHECK(testSession({"(set i 1)", "(set sum 0)",
+                               "(while (lt i 11) (set! sum (add sum i)) (set! i (add i 1)))",
+                               "sum"}) == "55");
+        }
+        SUBCASE("F.5.2 while returns nil") {
+            CHECK(testSession({"(while ())"}) == "()");
+        }
+    }
+
+    TEST_CASE("F.6 scoping edge cases") {
+        SUBCASE("F.6.1 inner param shadows outer") {
+            CHECK(testSession({"(let ((x 1)) (let ((x 2)) x))"}) == "2");
+        }
+        SUBCASE("F.6.2 outer binding visible after inner let ends") {
+            CHECK(testSession({"(let ((x 1)) (let ((x 2)) x) x)"}) == "1");
+        }
+        SUBCASE("F.6.3 set! hits nearest binding only") {
+            CHECK(testSession({"(let ((x 1)) (let ((x 2)) (set! x 99)) x)"}) == "1");
+        }
+        SUBCASE("F.6.4 set! on a global from inside a closure") {
+            CHECK(testSession({"(set g 0)", "((lambda () (set! g 7)))", "g"}) == "7");
+        }
+        SUBCASE("F.6.5 lambda inside a def'd function captures its param") {
+            CHECK(testSession({"(def mk (n) (lambda () n))", "(set f (mk 9))", "(f)"}) == "9");
+        }
+        SUBCASE("F.6.6 closure passed as an argument") {
+            CHECK(testSession({"(set twice (lambda (f x) (f (f x))))",
+                               "(twice (lambda (y) (mul y 3)) 2)"}) == "18");
+        }
+        SUBCASE("F.6.7 empty let") {
+            CHECK(testSession({"(let () 4)"}) == "4");
+        }
+        SUBCASE("F.6.8 empty let*") {
+            CHECK(testSession({"(let* () 4)"}) == "4");
+        }
+    }
+
+    TEST_CASE("F.7 tail position does not grow the C++ stack") {
+        SUBCASE("F.7.1 100k-deep tail recursion through a closure") {
+            CHECK(testSession({"(set loop (lambda (n) (if (lt n 1) 'done (loop (sub n 1)))))",
+                               "(loop 100000)"}) == "done");
+        }
+        SUBCASE("F.7.2 tail call through begin and let") {
+            CHECK(testSession({"(set loop (lambda (n) (begin 0 (let ((m (sub n 1))) (if (lt m 0) 'ok (loop m))))))",
+                               "(loop 50000)"}) == "ok");
+        }
+    }
+
+    TEST_CASE("F.8 old behavior is preserved") {
+        SUBCASE("F.8.1 def'd functions don't use dynamic scope") {
+            CHECK(testSession({"(def f (x) (g))", "(def g () x)", "(f 5)"}) == "x");
+        }
+        SUBCASE("F.8.2 localEnv clea after closure calls") {
+            testSession({"(set f (lambda (x) (add x 1)))", "(f 1)"});
+            CHECK(isNil(localEnv));
+        }
+    }
+}  

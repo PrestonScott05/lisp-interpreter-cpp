@@ -15,7 +15,8 @@ using namespace std;
 enum class ExpressionType {
     Nil, 
     Atom, 
-    Pair
+    Pair,
+    Closure
 };
 
 enum class Operator {
@@ -44,6 +45,8 @@ enum class Operator {
     //functions!! (finally)
     Function, 
     Def,
+
+    Lambda, Begin, Let, LetStar, SetBang, While,
 
     Unknown,
 };
@@ -103,6 +106,10 @@ inline bool isAtom(shared_ptr<SExpression> node) {
 
 inline bool isPair(shared_ptr<SExpression> node) {
     return node->type == ExpressionType::Pair;
+}
+
+inline bool isClosure(shared_ptr<SExpression> node) {
+    return node->type == ExpressionType::Closure;
 }
 
 inline bool isInteger(const string &s) {
@@ -274,6 +281,8 @@ inline string exprToString(const shared_ptr<SExpression> &expr) {
     if (isAtom(expr)) return expr->atomValue;
     if (isNil(expr)) return "()";
 
+    if(isClosure(expr)) return "#<closure>";
+
     string out = "(";
 
     auto cur = expr;
@@ -330,9 +339,9 @@ inline shared_ptr<SExpression> lookupFrame(const shared_ptr<SExpression> &symbol
 }
 
 inline shared_ptr<SExpression> lookup(shared_ptr<SExpression> symbol) {
-    if (isPair(localEnv)) {
+    for (auto frames = localEnv; isPair(frames); frames = cdr(frames)) {
         bool found;
-        auto val = lookupFrame(symbol, car(localEnv), found);
+        auto val = lookupFrame(symbol, car(frames), found);
         if (found) return val;
     }
 
@@ -345,6 +354,37 @@ inline shared_ptr<SExpression> lookup(shared_ptr<SExpression> symbol) {
 
     return symbol;
 }
+
+inline shared_ptr<SExpression> findBindingCell(const shared_ptr<SExpression> &symbol) {
+    for (auto frames = localEnv; isPair(frames); frames = cdr(frames)) {
+        auto names = car(car(frames));
+        auto values = car(cdr(car(frames)));
+
+        while (isPair(names) && isPair(values)) {
+            if (car(names)->atomValue == symbol->atomValue) return values;
+            names = cdr(names);
+            values = cdr(values);
+        }
+    }
+
+    for (auto env = rho; isPair(env); env = cdr(env)) {
+        auto entry = car(env);
+        
+        if (car(entry)-> atomValue == symbol->atomValue) return cdr(entry);
+
+    }
+
+    return nullptr;
+}
+
+inline shared_ptr<SExpression> makeClosure(shared_ptr<SExpression> params, shared_ptr<SExpression> body, shared_ptr<SExpression> env) {
+    auto c = make_shared<SExpression>();
+
+    c->type = ExpressionType::Closure;
+    c->car = cons(params, body);
+    c->cdr = env;
+    return c;
+}   
 
 inline Operator toOp(const string &s) {
     if (s == "quote") return Operator::Quote;
@@ -376,6 +416,12 @@ inline Operator toOp(const string &s) {
 
     if (s == "function") return Operator::Function;
     if (s == "def") return Operator::Def;
+    if (s == "lambda") return Operator::Lambda;
+    if (s == "begin") return Operator::Begin;
+    if (s == "let") return Operator::Let;
+    if (s == "let*") return Operator::LetStar;
+    if (s == "set!") return Operator::SetBang;
+    if (s == "while") return Operator::While;
 
     return Operator::Unknown;
 }
@@ -403,6 +449,17 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
         if (isNil(expression)) return expression;
 
         shared_ptr<SExpression> operation = car(expression);
+
+        if (isPair(operation)) {
+            shared_ptr<SExpression> fn = eval(operation);
+            if (!isClosure(fn)) return expression;
+
+            shared_ptr<SExpression> actuals = evalList(cdr(expression));
+            localEnv = cons(list(car(car(fn)), actuals), cdr(fn));
+            expression = cons(makeAtom("begin"), cdr(car(fn)));
+            continue;
+
+        } 
 
         if (!isAtom(operation)) {
             return expression;
@@ -649,8 +706,95 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
                 return eval(setExpr);
             }
 
+            case Operator::Lambda: {
+                return makeClosure(car(cdr(expression)), cdr(cdr(expression)), localEnv);
+            }
+            
+            case Operator::Begin: {
+                shared_ptr<SExpression> forms = cdr(expression);
+                if (isNil(forms)) return FALSE_;
+
+                while (isPair(cdr(forms))) {
+                    eval(car(forms));
+                    forms = cdr(forms);
+                }
+                expression = car(forms);
+                continue;
+            }
+
+            case Operator::Let: {
+                shared_ptr<SExpression> bindings = car(cdr(expression));
+                shared_ptr<SExpression> body = cdr(cdr(expression));
+
+                vector<shared_ptr<SExpression>> names, values;
+                
+                for (auto b = bindings; isPair(b); b = cdr(b)) {
+                    names.push_back(car(car(b)));
+                    values.push_back(car(cdr(car(b))));
+                }
+
+                shared_ptr<SExpression> nameList = makeNil(), valueList = makeNil();
+
+                for (size_t i = names.size(); i-- > 0;) {
+                    nameList = cons(names[i], nameList);
+                    valueList = cons(values[i], valueList);
+                }
+
+                shared_ptr<SExpression> lambda = cons(makeAtom("lambda"), cons(nameList, body));
+                expression = cons(lambda, valueList);
+                continue;
+            }
+
+            case Operator::LetStar: {
+                shared_ptr<SExpression> bindings = car(cdr(expression));
+
+                shared_ptr<SExpression> body = cdr(cdr(expression));
+
+                if (!isPair(bindings) || isNil(cdr(bindings))) {
+                    expression = cons(makeAtom("let"), cons(bindings, body));
+                    continue;
+                }
+
+                shared_ptr<SExpression> inner = cons(makeAtom("let*"), cons(cdr(bindings), body));
+                expression = cons(makeAtom("let"), cons(cons(car(bindings), makeNil()), cons(inner, makeNil())));
+                continue;
+
+            }
+
+            case Operator::SetBang: {
+                shared_ptr<SExpression> name = car(cdr(expression));
+                shared_ptr<SExpression> value = eval(car(cdr(cdr(expression))));
+
+                shared_ptr<SExpression> cell = findBindingCell(name);
+                if (!cell) throw runtime_error("set! of unbound variable: " + name->atomValue);
+
+                cell -> car = value;
+                return value;
+            }
+
+            case Operator::While: {
+                shared_ptr<SExpression> condition = car(cdr(expression));
+                shared_ptr<SExpression> body = cdr(cdr(expression));
+
+                while(!isNil(eval(condition))) {
+                    for (auto form = body; isPair(form); form = cdr(form)) {
+                        eval(car(form));
+                    }
+                }
+                return FALSE_;
+            }
+
+
+
             case Operator::Unknown: {
                 shared_ptr<SExpression> fn = lookup(operation);
+
+                if (isClosure(fn)) {
+                    shared_ptr<SExpression> actuals = evalList(cdr(expression));
+                    localEnv = cons(list(car(car(fn)), actuals), cdr(fn));
+                    expression = cons(makeAtom("begin"), cdr(car(fn)));
+                    continue;
+                }
 
                 if (!isPair(fn) || car(fn)->atomValue != "function") return expression;
 
@@ -659,7 +803,7 @@ inline shared_ptr<SExpression> eval(shared_ptr<SExpression> expression) {
 
                 shared_ptr<SExpression> actuals = evalList(cdr(expression));
 
-                localEnv = cons(list(params, actuals), guard.saved);
+                localEnv = cons(list(params, actuals), makeNil());
                 expression = body;
                 continue;
             }
