@@ -6,13 +6,13 @@ Built by Preston Lumpkins.
 ***Some Unit tests were written with the assistance of Anthropic's Claude Sonnet 5***
 
 ## About
-This is a fully functinoal lisp interpreter with a reader, evaluator, environment handler, special forms, and user defined functions. It follows the specifications set by Professor Donald Yessick - CS-403 - Fall 2026
+This is a fully functional lisp interpreter with a reader, evaluator, environment handler, special forms, and user defined functions. It follows the specifications set by Professor Donald Yessick - CS-403 - Fall 2026
 
 ## layout
 src/
     sexpression.h
     main.cpp
-test/
+tests/
     tests.cpp
     doctest.h (framework);
 
@@ -57,16 +57,33 @@ Malformed input prints an error and the loop continues.
 - 1.6 local env - completed
 - 1.7 function calls - completed
 - 1.8 def syntactic sugar - completed
-- next: nothing! We're finished!
+- Final Project Extension - completed
+
+## Final Project Extensions: 
+| feature | example |
+
+- lambda + lexical closures | `((lambda (x) (add x 1)) 41)` |
+- begin | `(begin (display "hi") 2)` |
+- let / let* | `(let* ((a 1) (b (add a 1))) b)` |
+- set! (mutates in place) | `(set! n (add n 1))` |
+- while | `(while (lt i 10) (set! i (add i 1)))` |
+- strings | `"hello\n"` |
+- display / newline | `(display "x = " 5) (newline)` |
+- read-line | `(set name (read-line))` |
+- load | `(load "lib.lisp")` |
+- string?, string-append, string-length | `(string-append "a" "b")` |
+
+Calls in tail position run in a loop instead of recursing, so deep recursion doesn't overflow the stack.
+Old `def`/`function` behavior is unchanged.
 
 ## Test Output: 
 
 pslum@PrestonsLaptop /cygdrive/d/academics/CS-403/projects/lisp-interpreter-cpp
-make test
-g++ -std=c++17 -Wall -Wextra -I src tests/tests.cpp -o tests/run
+$ make test
 ./tests/run
 [doctest] doctest version is "2.4.11"
 [doctest] run with "--help" for options
-[doctest] test cases:  35 |  35 passed | 0 failed | 0 skipped
-[doctest] assertions: 180 | 180 passed | 0 failed |
+===============================================================================
+[doctest] test cases:  48 |  48 passed | 0 failed | 0 skipped
+[doctest] assertions: 246 | 246 passed | 0 failed |
 [doctest] Status: SUCCESS!
