@@ -1020,16 +1020,16 @@ TEST_SUITE("final project batch 2: strings + io") {
                 << "(set greeting \"loaded (with parens)\")\n";
         }
 
-        SUBCASE("S.5.1 load defines things for later expressions") {
+        SUBCASE("S.5.1 load defines thing for later expressions") {
             CHECK(testSession({"(load \"tests/load_fixture.lisp\")", "(square 7)"}) == "49");
         }
         SUBCASE("S.5.2 strings in loaded files work") {
             CHECK(testSession({"(load \"tests/load_fixture.lisp\")", "greeting"}) == "\"loaded (with parens)\"");
         }
-        SUBCASE("S.5.3 load returns void") {
+        SUBCASE("S.5.3 load returns voi") {
             CHECK(testSession({"(load \"tests/load_fixture.lisp\")"}) == "");
         }
-        SUBCASE("S.5.4 missing file throws") {
+        SUBCASE("S.5.4 missing file thros") {
             CHECK_THROWS_AS(testSession({"(load \"tests/does_not_exist.lisp\")"}), runtime_error);
         }
         SUBCASE("S.5.5 non-string path throws") {
